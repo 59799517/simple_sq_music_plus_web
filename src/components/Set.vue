@@ -5,6 +5,7 @@ import {getAllSet, isLogin, modifySet} from "../utils/api.js";
 import TopWitge from "./TopWitge.vue";
 
 let setinfodata = window.localStorage.getItem("setinfo");
+let token  = window.localStorage.getItem("token")??"未获取到";
 let setinfo = ref(JSON.parse(setinfodata));
 // onBeforeMount(()=>{
 //
@@ -64,6 +65,11 @@ let setData=()=>{
 <template>
   <TopWitge/>
   <n-card title="设置">
+    <n-card title="Toekn和插件">
+      <p>   插件url：↑↑↑↑↑↑↑↑↑↑↑↑（浏览器显示这个复制上 http://xxxxx:xxx 只要这一段即可 /#后边的不要）↑↑↑↑↑↑↑↑↑↑↑↑↑</p>
+      <p> 插件使用token：</p>
+     <p >{{token}}</p>
+    </n-card>
     <n-list v-for="(item, index) in setinfo">
       <n-list-item>
         <n-thing :title="item.configName" :description="item.configValue" />
