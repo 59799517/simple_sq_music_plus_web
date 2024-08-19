@@ -1,8 +1,8 @@
 import request from "./request.js";
 import qs from "qs";
 
-// const baseUrl = 'http://127.0.0.1:8099'
-const baseUrl = ''
+const baseUrl = 'http://127.0.0.1:8099'
+// const baseUrl = ''
 //
 // const baseUrl = '/sqmusic-api'
 
@@ -264,6 +264,7 @@ export  function refreshStatus(id) {
  * @returns {*}
  */
 export function postDownloadInfo(downloadMusicname,downloadArtistname,downloadAlbumname,downloadType,audioBook,status,downloadTimeStart,downloadTimeEnd,pageSize=20,pageIndex=1) {
+    console.log('dasdas',downloadTimeStart,downloadTimeEnd)
     return request({
         url: baseUrl + "/downloadInfo/getDownloadInfo/search",
         method: "post",

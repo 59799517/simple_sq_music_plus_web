@@ -63,7 +63,7 @@ let columns = [
   ,{
     title: '添加时间',
     key: 'downloadTime',
-    width: 50,
+    width: 100,
     ellipsis: true,
   }
   ,{
@@ -121,7 +121,7 @@ let columns = [
   ,{
     title: '操作',
     key: 'action',
-    width: 100,
+    width: 50,
     align: 'left',
     render(row) {
 
@@ -204,6 +204,9 @@ let download_status_value = ref("")
 //时间【开始，结束】
 let download_time_value = ref([])
 
+let download_time_start_value = ''
+let download_time_end_value = ''
+
 
 
 // 下载状态列表
@@ -266,7 +269,7 @@ onBeforeMount(()=>{
 })
 
 let getDownloadData = ()=>{
-  postDownloadInfo(keyword_music_value.value,keyword_artis_value.value,keyword_album_value.value,download_type_value.value,false,download_status_value.value,download_time_value.value[0],download_time_value.value[1],pageSizes.value,page_index.value).then(value=>{
+  postDownloadInfo(keyword_music_value.value,keyword_artis_value.value,keyword_album_value.value,download_type_value.value,false,download_status_value.value,download_time_start_value,download_time_end_value,pageSizes.value,page_index.value).then(value=>{
     item_total.value = value.data.data.total
     page_data.value = value.data.data.records;
   })
@@ -437,9 +440,12 @@ let update_download_status=(value, option)=>{
             :input-readonly	 ="true"
             type="datetimerange"
             :shortcuts="shortcuts"
+            :clearable="true"
             :update-value-on-close="true"
             :on-update-formatted-value="(value)=>{
              download_time_value.value = value
+             download_time_start_value = value[0]
+             download_time_end_value = value[1]
           }"
         />
       </n-form-item>
