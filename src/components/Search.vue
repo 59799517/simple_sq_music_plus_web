@@ -15,9 +15,27 @@ let keyword_value = ref("")
 let pageSize = ref(20)
 // 页码
 let pageIndex = ref(1)
-
 // 每次查询数据
 let list_data = ref([])
+
+
+let is_show_play = ref(false);
+
+let getShowPlay=()=>{
+  //找到configKey是music.show.play的数据
+  let setinfodata = window.localStorage.getItem("setinfo");
+  let setinfo = ref(JSON.parse(setinfodata));
+
+
+  for (let setinfoElement of setinfo.value) {
+    if (setinfoElement["configKey"] == "music.show.play"&&setinfoElement["configValue"] == "true") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 
 
 // 搜索类型选项
@@ -72,8 +90,9 @@ onBeforeMount(()=>{
     nextTick(()=>{
       select_options.value = value.data.data;
     })
-
   })
+
+  is_show_play.value = getShowPlay();
 })
 
 /**
@@ -192,6 +211,7 @@ let PreviousPage =()=>{
 
           <template #suffix>
             <n-button @click="b_musicDownload(item.id)"> 下载</n-button>
+            <n-button v-if="is_show_play" @click="b_musicPlayerURl(item.id)"> 播放</n-button>
           </template>
         </n-list-item>
       </n-list>

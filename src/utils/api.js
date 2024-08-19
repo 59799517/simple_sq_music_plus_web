@@ -1,8 +1,8 @@
 import request from "./request.js";
 import qs from "qs";
 
-// const baseUrl = 'http://127.0.0.1:8099'
-const baseUrl = ''
+const baseUrl = 'http://127.0.0.1:8099'
+// const baseUrl = ''
 //
 // const baseUrl = '/sqmusic-api'
 
@@ -222,6 +222,69 @@ export function getDownloadInfo(type,pageSize=20,pageIndex=1) {
 }
 
 /**
+ * 单个删除
+ * @param id
+ * @returns {*}
+ */
+export  function delDownloadInfo(id) {
+    return request({
+        url: baseUrl + "/downloadInfo/deleteDownloadInfo/",
+        method: "post",
+        data:{"id":id}
+    });
+}
+
+/**
+ * 重新下载
+ * @param id
+ * @returns {*}
+ */
+export  function refreshStatus(id) {
+    return request({
+        url: baseUrl + "/downloadInfo/refresh/status",
+        method: "post",
+        data:{"id":id}
+    });
+}
+
+
+
+/**
+ *
+ * @param downloadMusicname
+ * @param downloadArtistname
+ * @param downloadAlbumname
+ * @param downloadType
+ * @param audioBook
+ * @param status
+ * @param downloadTimeStart
+ * @param downloadTimeEnd
+ * @param pageSize
+ * @param pageIndex
+ * @returns {*}
+ */
+export function postDownloadInfo(downloadMusicname,downloadArtistname,downloadAlbumname,downloadType,audioBook,status,downloadTimeStart,downloadTimeEnd,pageSize=20,pageIndex=1) {
+    return request({
+        url: baseUrl + "/downloadInfo/getDownloadInfo/search",
+        method: "post",
+        data: {"downloadMusicname":downloadMusicname,
+            "downloadArtistname":downloadArtistname,
+            "downloadAlbumname":downloadAlbumname,
+            "downloadType":downloadType,
+            "audioBook":audioBook,
+            "status":status,
+            "downloadTimeStart":downloadTimeStart,
+            "downloadTimeEnd":downloadTimeEnd,
+            "pageSize":pageSize,
+            "pageIndex":pageIndex
+            }
+    });
+}
+
+
+
+
+/**
  * 删除全部任务（清空全部恩物）
  * @returns {*}
  */
@@ -316,6 +379,18 @@ export function parserUrlAndDownload(url,isAudioBook,bookName,artist) {
         method: "post",
         data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist,"br":"2000","plugType":"kw"}
     });
+
+
 }
 
 
+/**
+ * 获取后端版本号
+ * @returns {*}
+ */
+export function getversion() {
+    return request({
+        url: baseUrl + "/set/version",
+        method: "get"
+    });
+}

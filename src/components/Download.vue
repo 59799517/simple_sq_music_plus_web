@@ -1,13 +1,17 @@
 <script setup>
 import {CheckmarkCircleOutline,WarningOutline,EllipsisHorizontalCircle} from "@vicons/ionicons5";
 import TopWitge from "./TopWitge.vue";
+import { NButton, NTag, useMessage } from 'naive-ui'
+import { h } from 'vue'
+
 import {againTask, delErrorTask, delSuccessTask, delWaitingTask, getDownloadInfo, refreshTask} from "../utils/api.js";
 
 
 
+
+
+
 let pageSizes=ref(20)
-
-
 
 let waiting_index = ref(1);
 let loading_index = ref(1);
@@ -223,6 +227,10 @@ let refreshTask_b =()=>{
             </template>
           </n-list-item>
         </n-list>
+
+
+
+
         <div class="page">
           <n-button @click="waiting_pageUpdata('prev')">
             上一页

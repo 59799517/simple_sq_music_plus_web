@@ -16,6 +16,9 @@ let setinfo = ref(JSON.parse(setinfodata));
 //   })
 //
 // })
+
+let show_hide_set = ref(false)
+
 let showModal = ref(false)
 let selectValue =ref("")
 let selectType =ref("input")
@@ -69,9 +72,10 @@ let setData=()=>{
       <p>   插件url：↑↑↑↑↑↑↑↑↑↑↑↑（浏览器显示这个复制上 http://xxxxx:xxx 只要这一段即可 /#后边的不要）↑↑↑↑↑↑↑↑↑↑↑↑↑</p>
       <p> 插件使用token：</p>
      <p >{{token}}</p>
+      <n-button @click="show_hide_set=!show_hide_set">显示隐藏设置</n-button>
     </n-card>
     <n-list v-for="(item, index) in setinfo">
-      <n-list-item>
+      <n-list-item v-if="show_hide_set || item.configShow=='Y'">
         <n-thing :title="item.configName" :description="item.configValue" />
         <template #suffix>
           <n-button @click="openDialog(item.type,item.configName,item.configValue,item.configKey)"> 修改</n-button>

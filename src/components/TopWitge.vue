@@ -1,5 +1,6 @@
 <script setup>
-import {logout} from "../utils/api.js";
+import {getversion, logout} from "../utils/api.js";
+import {ref} from "vue";
 
 let clockTheam = inject('changetheme')
 
@@ -8,7 +9,29 @@ let logout_b= ()=>{
     window.$message.success(value.data.msg)
   })
 }
-
+let is_show_old_download = ref(false);
+let version = ref("x.x.x");
+let getShowOldDownload=()=>{
+  //找到configKey是music.show.play的数据
+  let setinfodata = window.localStorage.getItem("setinfo");
+  let setinfo = ref(JSON.parse(setinfodata));
+  for (let setinfoElement of setinfo.value) {
+    if (setinfoElement["configKey"] == "system.show.old.download"&&setinfoElement["configValue"] == "true") {
+      console.log("showOldDownload",setinfoElement["configValue"])
+      return true;
+    }
+  }
+  return false;
+}
+/**
+ * 初始化
+ */
+onBeforeMount(()=>{
+  is_show_old_download.value = getShowOldDownload();
+  getversion().then(value=>{
+    version.value = value.data.data;
+  })
+})
 
 </script>
 
@@ -17,6 +40,12 @@ let logout_b= ()=>{
     <div class="header">
       <div class="box">
       <h2>&nbsp;&nbsp;&nbsp;SqMusicTool</h2>
+        <p>
+          <n-gradient-text :size="12" type="success">
+            &nbsp;{{version}}
+          </n-gradient-text>
+        </p>
+
       </div>
       <div class="box">
           <router-link active-class="active" to="/search">
@@ -24,11 +53,11 @@ let logout_b= ()=>{
               搜索
             </n-button>
           </router-link>
-          <router-link active-class="active" to="/download">
-            <n-button  size="large" quaternary>
-              下载
-            </n-button>
-            </router-link>
+        <router-link  active-class="active" :to="is_show_old_download?'/newDownload':'/download'">
+          <n-button  size="large" quaternary>
+            下载
+          </n-button>
+        </router-link>
           <router-link active-class="active" to="/parsertext">
             <n-button  size="large" quaternary>
               解析文本

@@ -2,7 +2,7 @@
 import HelloWorld from './components/HelloWorld.vue'
 import Home from './components/Home.vue'
 
-import { darkTheme,NMessageProvider  } from "naive-ui";
+import { darkTheme,NMessageProvider, zhCN, dateZhCN  } from "naive-ui";
 import { provide } from 'vue'
 import MessageApi from "./components/message-api.vue";
 
@@ -22,7 +22,7 @@ provide("changetheme",changetheme);
 </script>
 
 <template>
-  <n-config-provider :theme="theme">
+  <n-config-provider :theme="theme" :locale="zhCN" :date-locale="dateZhCN">
     <n-dialog-provider>
     <n-message-provider placement="bottom">
       <MessageApi />
