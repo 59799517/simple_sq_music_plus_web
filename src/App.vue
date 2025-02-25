@@ -1,6 +1,5 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import Home from './components/Home.vue'
+
 
 import { darkTheme,NMessageProvider, zhCN, dateZhCN  } from "naive-ui";
 import { provide } from 'vue'

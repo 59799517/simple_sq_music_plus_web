@@ -394,4 +394,67 @@ export function getversion() {
         url: baseUrl + "/set/version",
         method: "get"
     });
+
+}
+
+
+
+
+/**
+ * 酷狗刷新token
+ */
+export function kgRefreshToken() {
+    return request({
+        url: baseUrl + "/set/kg/refreshToken",
+        method: "get"
+    });
+}
+/**
+ * 酷狗签到
+ */
+export function kgSign() {
+    return request({
+        url: baseUrl + "/set/kg/signIn",
+        method: "get"
+    });
+}
+
+/**
+ * 获取酷狗Qr码
+ */
+export function getKgQrCode() {
+    return request({
+        url: baseUrl + "/set/kg/getQrImage",
+        method: "get"
+    });
+}
+
+/**
+ * 获取酷狗二维码扫码状态
+ */
+export function getKgQrCodeStatus() {
+    return request({
+        url: baseUrl + "/set/kg/checkQrCodeStatus",
+        method: "get"
+    });
+}
+
+/**
+ * 获取酷狗微信二维码
+ */
+export function getKgWxQrCode() {
+    return request({
+        url: baseUrl + "/set/kg/getWxQrImage",
+        method: "get"
+    });
+}
+
+/**
+ * 获取酷狗微信二维码扫码状态
+ */
+export function getKgWxQrCodeStatus() {
+    return request({
+        url: baseUrl + "/set/kg/checkWxQrCodeStatus",
+        method: "get"
+    });
 }

@@ -69,7 +69,7 @@ let shear_select_options=ref([
         value: "artist"
       },
       {
-        label: "歌手（全部歌曲）-不分失效",
+        label: "歌手（全部歌曲）-不分接口失效",
         value: "artistAllSong"
       }
     ])
