@@ -378,7 +378,7 @@ export function parserUrlAndDownload(url,isAudioBook,bookName,artist) {
     return request({
         url: baseUrl + "/parserUrlAndDownload",
         method: "post",
-        data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist,"br":"2000","plugType":"kw"}
+        data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist,"br":"128","plugType":"kw"}
     });
 
 
