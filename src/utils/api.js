@@ -458,3 +458,34 @@ export function getKgWxQrCodeStatus() {
         method: "get"
     });
 }
+
+/**
+ * 获取QQVIP QQ登录二维码
+ */
+export function getQQVipQrCode() {
+    return request({
+        url: baseUrl + "/set/qqvip/getQrImage",
+        method: "get"
+    });
+}
+
+/**
+ * 获得QQvip QQ二维码扫码状态
+ */
+export function getQQVipQrCodeStatus() {
+    return request({
+        url: baseUrl + "/set/qqvip/checkQrCodeStatus",
+        method: "get"
+    });
+}
+
+/**
+ * 僧侯东刷新qqvip token
+ */
+export function refreshQQvipCookie() {
+    return request({
+        url: baseUrl + "/set/qqvip/refreshQQvipCookie",
+        method: "get"
+    });
+}
+

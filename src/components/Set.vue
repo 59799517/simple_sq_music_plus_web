@@ -1,7 +1,19 @@
 <script setup>
 
 
-import {getAllSet, kgSign, kgRefreshToken, getKgQrCode, modifySet, getKgQrCodeStatus,getKgWxQrCode,getKgWxQrCodeStatus} from "../utils/api.js";
+import {
+  getAllSet,
+  kgSign,
+  kgRefreshToken,
+  getKgQrCode,
+  modifySet,
+  getKgQrCodeStatus,
+  getKgWxQrCode,
+  getKgWxQrCodeStatus,
+  getQQVipQrCode,
+  getQQVipQrCodeStatus,
+  refreshQQvipCookie
+} from "../utils/api.js";
 import TopWitge from "./TopWitge.vue";
 
 
@@ -20,6 +32,8 @@ onBeforeMount(()=>{
   //
   // })
   kgIsLogin = getKgIslogin();
+  qqvipIsLogin= getQQIslogin();
+
 })
 
 let show_hide_set = ref(false)
@@ -34,6 +48,10 @@ let kgIsLogin = ref(false)
 let kgqr = ref("");
 let KgIoginInfo = ref("")
 let KgSignInfo = ref([])
+// QQvip相关
+let qqvipIsLogin = ref(false)
+let qqqr = ref("");
+let qqvipLoginInfo = ref("")
 
 
 
@@ -87,6 +105,9 @@ let fkgSign = ()=>{
     }
   })
 }
+/*
+获取酷狗二维码
+ */
 let getKgQr=()=>{
   getKgQrCode().then((value)=>{
     kgqr.value=value.data.data
@@ -121,12 +142,26 @@ let setData=()=>{
         window.localStorage.setItem("setinfo",JSON.stringify(value.data.data))
         setinfo.value =value.data.data
         getKgIslogin();
+        getQQIslogin();
       })
     }else{
       window.$message.error("错误信息："+cv.data.msg)
     }
   })
 }
+//判断开启了QQvip
+let getQQIslogin=()=>{
+  for (let setinfoElement of setinfo.value) {
+    if (setinfoElement["configKey"] == "plug.qqvip.open"&&setinfoElement["configValue"] == "true") {
+      qqvipIsLogin=true;
+      return true;
+    }
+  }
+  qqvipIsLogin = false;
+  return false
+}
+
+
 // 判断开启了酷狗功能
 let getKgIslogin=()=>{
   //setinfo.value 找到指定的配置
@@ -179,21 +214,74 @@ let getKgSignInfo=()=>{
   })
 }
 
+
+/**
+ * 获取QQVIP QQ二维码
+ */
+let getqqvipqqQr=()=>{
+  getQQVipQrCode().then((value)=>{
+    qqqr.value = value.data.data
+  })
+}
+/**
+ * 获取二维码状态
+ */
+let getQQVipQrCodeStatusc=()=>{
+  getQQVipQrCodeStatus().then((value)=>{
+    console.log("获取的状态是：",value)
+    if (value.data.code===200){
+      window.$message.success("扫码成功（已获取到用户信息）")
+      qqqr.value="";
+    }else{
+      window.$message.error(value.data.msg)
+    }
+  })
+}
+let refreshQQvipCookiec=()=>{
+  refreshQQvipCookie().then(value => {
+    if (value.data.code===200){
+      window.$message.success("刷新成功")
+    }else{
+      window.$message.error(value.data.msg)
+    }
+  })
+}
+
+
 </script>
 
 <template>
   <TopWitge/>
   <n-card title="设置">
-    <n-card title="Toekn和插件">
+    <n-card title="Toekn和插件（freeMp3关停暂时用不到了）">
       <p>   插件url：↑↑↑↑↑↑↑↑↑↑↑↑（浏览器显示这个复制上 http://xxxxx:xxx 只要这一段即可 /#后边的不要）↑↑↑↑↑↑↑↑↑↑↑↑↑</p>
       <p> 插件使用token：</p>
      <p >{{token}}</p>
       <n-button @click="show_hide_set=!show_hide_set">显示隐藏设置</n-button>
 
-
     </n-card>
+
+    <n-card title="QQvip相关设置"  v-if="qqvipIsLogin">
+      <p >当前插件已经开启：{{qqvipIsLogin?'已开启插件':'未开启插件'}}</p>
+      <p >{{qqvipIsLogin?'每天0,4,8,12,16,20,23的时候自动刷新一次cookies':''}}</p>
+      <p>咱未开发微信扫码请手机QQ扫码登录</p>
+      <n-button @click="refreshQQvipCookiec">
+        刷新当前登录cookie
+      </n-button>
+      <n-button @click="getqqvipqqQr">
+        获取QQ音乐二维码
+      </n-button>
+      <n-button @click="getQQVipQrCodeStatusc">
+        检查二维码状态
+      </n-button>
+      <n-divider>
+      </n-divider>
+      <n-image v-if="qqqr" :src="qqqr"></n-image>
+    </n-card>
+
     <n-card title="某狗概念版相关"  v-if="kgIsLogin">
       <p >当前插件已经开启：{{kgIsLogin?'已登录（无需扫码）':'未登录（需要扫码登录）'}}</p>
+      <p >{{kgIsLogin?'每天0,3,6,9,12,15,18,21时候自动签到一次':''}}</p>
       <n-button @click="getKgQr">
         获取酷狗二维码（生成的多了有问题）
       </n-button>
