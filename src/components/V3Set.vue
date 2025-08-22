@@ -372,6 +372,7 @@ let fkgSign = ()=>{
     <n-tabs type="line" animated>
       <n-tab-pane
           display-directive="if"
+          default-value="kw"
           v-for="(configItems, pluginName) in plugConfig"
           :key="pluginName"
           :name="pluginName"
