@@ -184,6 +184,8 @@ let clogout=() => {
       window.$message.success("退出成功")
       stuserInfoStore.clearUserInfo()
       stconfigInfoStore.clearData()
+      // 清空cookie
+      window.document.cookie=""
       window.location.href="/"
     }else{
       window.$message.error("退出失败："+value.data.msg)
@@ -308,8 +310,8 @@ let fkgSign = ()=>{
     </n-list>
   </n-card>
   <n-card title="插件登录" v-if="qqvipPlugopen||kgPlugopen">
-    <n-tabs type="line" animated>
-      <n-tab-pane name="qqvip" tab="qqvip" v-if="qqvipPlugopen">
+    <n-tabs type="line"  animated>
+      <n-tab-pane display-directive="if" name="qqvip" tab="qqvip" v-if="qqvipPlugopen">
         <p>仅支持手机QQ扫码登录</p>
         <n-image v-if="qqqr" :src="qqqr"></n-image>
         <n-divider>
@@ -331,7 +333,7 @@ let fkgSign = ()=>{
 
 
       </n-tab-pane>
-      <n-tab-pane name="酷狗概念" tab="酷狗概念" v-if="kgPlugopen">
+      <n-tab-pane display-directive="if" name="酷狗概念" tab="酷狗概念" v-if="kgPlugopen">
         <n-image v-if="kgqr" :src="kgqr"></n-image>
         <n-divider v-if="kgLastTime!==''">
           酷狗签到领取VIP信息：
@@ -369,6 +371,7 @@ let fkgSign = ()=>{
   <n-card title="插件设置" style="margin-bottom: 16px">
     <n-tabs type="line" animated>
       <n-tab-pane
+          display-directive="if"
           v-for="(configItems, pluginName) in plugConfig"
           :key="pluginName"
           :name="pluginName"
