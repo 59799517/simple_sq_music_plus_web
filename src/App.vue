@@ -4,6 +4,9 @@
 import { darkTheme,NMessageProvider, zhCN, dateZhCN  } from "naive-ui";
 import { provide } from 'vue'
 import MessageApi from "./components/message-api.vue";
+import Login from "./components/Login.vue";
+
+
 
 let theme=ref(darkTheme);
 let name=ref('dark');
@@ -19,15 +22,17 @@ const changetheme = () => {
 };
 provide("changetheme",changetheme);
 </script>
-
 <template>
   <n-config-provider :theme="theme" :locale="zhCN" :date-locale="dateZhCN">
     <n-dialog-provider>
-    <n-message-provider placement="bottom">
+      <n-loading-bar-provider>
+      <n-message-provider placement="bottom">
       <MessageApi />
     </n-message-provider>
+      </n-loading-bar-provider>
     </n-dialog-provider>
     <n-global-style />
+<!--    <Login/>-->
     <router-view></router-view>
   </n-config-provider>
 

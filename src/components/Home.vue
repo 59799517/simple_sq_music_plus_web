@@ -1,11 +1,17 @@
 <script setup>
 
-import TopWitge from "./TopWitge.vue";
+import TopWitge from "./V3TopWitge.vue";
+import { useRoute, useRouter } from 'vue-router'
+const router = useRouter()
+
+
 </script>
 <template>
-<TopWitge/>
+  <div>
+    <TopWitge />
+      <router-view />
+  </div>
 </template>
-
 <style scoped>
 
 </style>

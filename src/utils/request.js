@@ -2,20 +2,27 @@
 // 导入axios
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
+import userInfoStore from "../stores/user"; //引入仓库
+import { storeToRefs } from "pinia";
 
-const routeraaa = useRouter()
+
+
+
+
+
 //1. 创建新的axios实例，
 const service = axios.create({
     // 公共接口--这里注意后面会讲
 
     // 超时时间 单位是ms，这里设置了3s的超时时间
-    timeout: 30 * 1000
+    timeout: 30 * 10000
 })
 // 2.请求拦截器
 service.interceptors.request.use(config => {
     //发请求前做的一些处理，数据转化，配置请求头，设置token,设置loading等，根据需求去添加
-   let token = window.localStorage.getItem("token") ?? ""
-    console.log("token:"+token)
+    const stuserInfoStore = userInfoStore();
+    const { username, token } = storeToRefs(stuserInfoStore); // 响应式
+    console.log("token:"+token.value)
     if (config.method=="post"||config.method=="POST"){
         // config.data = JSON.stringify(config.data); //数据转化,也可以使用qs转换
         config.headers = {
@@ -23,8 +30,8 @@ service.interceptors.request.use(config => {
         }
     }
     //如有需要：注意使用token的时候需要引入cookie方法或者用本地localStorage等方法，推荐js-cookie
-    if(token){
-    config.headers.sqmusic= token; //如果要求携带在请求头中
+    if(token.value){
+    config.headers.sqmusic= token.value; //如果要求携带在请求头中
     }
     return config
 }, error => {

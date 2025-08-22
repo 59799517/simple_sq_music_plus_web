@@ -3,6 +3,18 @@ import qs from "qs";
 
 // const baseUrl = 'http://127.0.0.1:8099'
 const baseUrl = ''
+
+
+const configUrl = "/api/config"
+const musicUrl = "/api/music"
+const downloadUrl = "/api/download"
+const taskUrl = "/api/task"
+const parserUrl = "/api/parser"
+const plugUrl = "/api/plug"
+
+
+
+// const baseUrl = ''
 //
 // const baseUrl = '/sqmusic-api'
 
@@ -14,9 +26,9 @@ const baseUrl = ''
  */
 export function login(username,password) {
     return request({
-        url: baseUrl + "/login" ,
+        url: baseUrl +configUrl+ "/login" ,
         method: "post",
-        data:{"username":username,"password":password}
+        data:{"username":username,"password":password,"device":"web"}
     });
 }
 
@@ -26,10 +38,11 @@ export function login(username,password) {
  * @returns {*}
  */
 
-export function logout() {
+export function logout(device) {
     return request({
-        url: baseUrl + "/logout" ,
-        method: "post"
+        url: baseUrl +configUrl+ "/logout" ,
+        method: "post",
+        data:{"device":device}
     });
 }
 
@@ -40,7 +53,7 @@ export function logout() {
  */
 export function isLogin() {
     return request({
-        url: baseUrl + "/isLogin" ,
+        url: baseUrl +configUrl + "/isLogin" ,
         method: "post"
     });
 }
@@ -51,7 +64,7 @@ export function isLogin() {
  */
 export function getAllSet() {
     return request({
-        url: baseUrl + "/set/getSetList/" ,
+        url: baseUrl +configUrl+ "/getConfigList" ,
         method: "get"
     });
 }
@@ -62,9 +75,9 @@ export function getAllSet() {
  * @param configValue 需要修改的值
  * @returns {*}
  */
-export function modifySet(configKey,configValue) {
+export function updateConfig(configKey,configValue) {
     return request({
-        url: baseUrl + "/set/modify" ,
+        url: baseUrl  +configUrl+"/updateConfig" ,
         method: "post",
         data:{"configKey":configKey,"configValue":configValue}
     });
@@ -75,28 +88,45 @@ export function modifySet(configKey,configValue) {
  * 获取搜索条件（插件类型）
  * @returns {*}
  */
-export function selectOption() {
+export function getAllOption() {
     return request({
-        url: baseUrl + "/set/selectOption",
+        url: baseUrl +configUrl+"/getOption",
         method: "get"
     });
 }
 
+
+/**
+ * 搜索提示
+ * @param plugName 插件类型  kw，qq，qqvip等
+ * @param keyword 关键字
+ */
+export function searchTips(plugName,keyword) {
+    return request({
+        url: baseUrl +musicUrl+"/searchTips",
+        method: "get",
+        params:{"plugName":plugName,"keyword":keyword}
+    });
+}
+
+
 /**
  * 搜索歌曲专辑等整体搜索
- * @param plugType 插件类型  kw，qq，mg等
+ * @param plugName 插件类型  kw，qq，mg等
  * @param searType 详见判断
  * @param keyword 关键字
  * @param pageSize 页码最多不超30否则有问题
  * @param pageIndex 当前页
  * @returns {*}
  */
-export function selectmusic(plugType,searType = "music",keyword,pageSize=20,pageIndex=1) {
-    console.log(plugType,searType ,keyword,pageSize,pageIndex)
+export function musicSearch(plugName,searType = "music",keyword,pageSize=20,pageIndex=1) {
+    // console.log(plugType,searType ,keyword,pageSize,pageIndex)
     if (searType === "music"){
         return request({
-            url: baseUrl + "/searchMusic/"+plugType+"/"+keyword+"/"+pageSize+"/"+pageIndex,
-            method: "get"
+            url: baseUrl + musicUrl+"/searchSong",
+            method: "get",
+            params:{"plugName":plugName,"keyword":keyword,"pageSize":pageSize,"pageIndex":pageIndex}
+
         });
     }else if (searType === "album"){
         return request({
@@ -118,16 +148,15 @@ export function selectmusic(plugType,searType = "music",keyword,pageSize=20,page
 
 /**
  * 下载单曲
- * @param id
- * @param plugType 插件名称
- * @param br 2000是 flac
+ * @param 下载的数据
  * @returns {*}
  */
-export function musicDownload(id="0",plugType="kw",br=2000) {
+export function musicDownload(data,brType) {
+    data["brType"] = brType;
     return request({
-        url: baseUrl + "/musicDownload",
+        url: baseUrl +downloadUrl+ "/downloadSong",
         method: "post",
-        data:{"id":id,"plugType":plugType,"br":br}
+        data:data
     });
 }
 /**
@@ -199,27 +228,6 @@ export function ArtistSongList(id="0",plugType="kw",br=2000) {
 
 
 
-/**
- * 获取下载信息
- * @param type 类型
- * @param pageSize 每页条数
- * @param pageIndex 页码
- * @returns {*}
- *
- *
- *    waiting("待下载","waiting"),
- *     loading("正在进行","loading"),
- *
- *     success("成功","success"),
- *
- *     error("错误","error");
- */
-export function getDownloadInfo(type,pageSize=20,pageIndex=1) {
-    return request({
-        url: baseUrl + "/downloadInfo/getDownloadInfo/"+type+"/"+pageSize+"/"+pageIndex,
-        method: "get"
-    });
-}
 
 /**
  * 单个删除
@@ -228,7 +236,7 @@ export function getDownloadInfo(type,pageSize=20,pageIndex=1) {
  */
 export  function delDownloadInfo(id) {
     return request({
-        url: baseUrl + "/downloadInfo/deleteDownloadInfo/",
+        url: baseUrl +taskUrl+ "/del",
         method: "post",
         data:{"id":id}
     });
@@ -241,7 +249,7 @@ export  function delDownloadInfo(id) {
  */
 export  function refreshStatus(id) {
     return request({
-        url: baseUrl + "/downloadInfo/refresh/status",
+        url: baseUrl +taskUrl+ "/refreshTask",
         method: "post",
         data:{"id":id}
     });
@@ -263,17 +271,15 @@ export  function refreshStatus(id) {
  * @param pageIndex
  * @returns {*}
  */
-export function postDownloadInfo(downloadMusicname,downloadArtistname,downloadAlbumname,downloadType,audioBook,status,downloadTimeStart,downloadTimeEnd,pageSize=20,pageIndex=1) {
-    console.log('dasdas',downloadTimeStart,downloadTimeEnd)
+export function postDownloadInfo(downloadMusicname,downloadArtistname,downloadAlbumname,downloadType,status,downloadTimeStart,downloadTimeEnd,pageSize=20,pageIndex=1) {
     return request({
-        url: baseUrl + "/downloadInfo/getDownloadInfo/search",
+        url: baseUrl + taskUrl +"/list",
         method: "post",
         data: {"downloadMusicname":downloadMusicname,
             "downloadArtistname":downloadArtistname,
             "downloadAlbumname":downloadAlbumname,
-            "downloadType":downloadType,
-            "audioBook":audioBook,
-            "status":status,
+            "downloadPlugName":downloadType,
+            "downloadStatus":status,
             "downloadTimeStart":downloadTimeStart,
             "downloadTimeEnd":downloadTimeEnd,
             "pageSize":pageSize,
@@ -302,7 +308,7 @@ export function delAllTask() {
  */
 export function delErrorTask() {
     return request({
-        url: baseUrl + "/downloadInfo/delErrorTask",
+        url: baseUrl + taskUrl+ "/delErrorTask",
         method: "get"
     });
 }
@@ -313,7 +319,7 @@ export function delErrorTask() {
  */
 export function delSuccessTask() {
     return request({
-        url: baseUrl + "/downloadInfo/delSuccessTask",
+        url: baseUrl + taskUrl+ "/delSuccessTask",
         method: "get"
     });
 }
@@ -324,7 +330,7 @@ export function delSuccessTask() {
  */
 export function delWaitingTask() {
     return request({
-        url: baseUrl + "/downloadInfo/delWaitingTask",
+        url: baseUrl + taskUrl+"/delWaitingTask",
         method: "get"
     });
 }
@@ -335,7 +341,7 @@ export function delWaitingTask() {
  */
 export function againTask() {
     return request({
-        url: baseUrl + "/downloadInfo/againTask",
+        url: baseUrl + taskUrl+"/againTask",
         method: "get"
     });
 }
@@ -346,22 +352,33 @@ export function againTask() {
  */
 export function refreshTask() {
     return request({
-        url: baseUrl + "/downloadInfo/refreshTask",
+        url: baseUrl + taskUrl+"/refreshTask",
         method: "get"
     });
 }
 
-
+/**
+ * 文本解析
+ * @param text
+ * @returns {*}
+ */
+export function parserText(text) {
+    return request({
+        url: baseUrl + parserUrl+"/parserText",
+        method: "post",
+        data: {"text":text}
+    });
+}
 /**
  * 文本解析下载
  * @param text
  * @returns {*}
  */
-export function downloadParser(text) {
+export function downloadParserText(text) {
     return request({
-        url: baseUrl + "/downloadParser",
+        url: baseUrl + downloadUrl+"/downloadParserText",
         method: "post",
-        data: {"text":text,"br":"2000","plugType":"kw"}
+        data: {"text":text}
     });
 }
 
@@ -376,9 +393,9 @@ export function downloadParser(text) {
  */
 export function parserUrlAndDownload(url,isAudioBook,bookName,artist) {
     return request({
-        url: baseUrl + "/parserUrlAndDownload",
+        url: baseUrl +downloadUrl+ "/downloadParserUrl",
         method: "post",
-        data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist,"br":"128","plugType":"kw"}
+        data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist}
     });
 
 
@@ -391,7 +408,7 @@ export function parserUrlAndDownload(url,isAudioBook,bookName,artist) {
  */
 export function getversion() {
     return request({
-        url: baseUrl + "/set/version",
+        url: baseUrl +configUrl+ "/version",
         method: "get"
     });
 
@@ -405,7 +422,7 @@ export function getversion() {
  */
 export function kgRefreshToken() {
     return request({
-        url: baseUrl + "/set/kg/refreshToken",
+        url: baseUrl + plugUrl+"/kg/refreshToken",
         method: "get"
     });
 }
@@ -414,7 +431,7 @@ export function kgRefreshToken() {
  */
 export function kgSign() {
     return request({
-        url: baseUrl + "/set/kg/signIn",
+        url: baseUrl +plugUrl+ "/kg/signIn",
         method: "get"
     });
 }
@@ -424,7 +441,7 @@ export function kgSign() {
  */
 export function getKgQrCode() {
     return request({
-        url: baseUrl + "/set/kg/getQrImage",
+        url: baseUrl + plugUrl+"/kg/getQrImage",
         method: "get"
     });
 }
@@ -434,7 +451,7 @@ export function getKgQrCode() {
  */
 export function getKgQrCodeStatus() {
     return request({
-        url: baseUrl + "/set/kg/checkQrCodeStatus",
+        url: baseUrl + plugUrl+"/kg/checkQrCodeStatus",
         method: "get"
     });
 }
@@ -444,7 +461,7 @@ export function getKgQrCodeStatus() {
  */
 export function getKgWxQrCode() {
     return request({
-        url: baseUrl + "/set/kg/getWxQrImage",
+        url: baseUrl + plugUrl+"/kg/getWxQrImage",
         method: "get"
     });
 }
@@ -454,7 +471,7 @@ export function getKgWxQrCode() {
  */
 export function getKgWxQrCodeStatus() {
     return request({
-        url: baseUrl + "/set/kg/checkWxQrCodeStatus",
+        url: baseUrl + plugUrl+"/kg/checkWxQrCodeStatus",
         method: "get"
     });
 }
@@ -464,7 +481,7 @@ export function getKgWxQrCodeStatus() {
  */
 export function getQQVipQrCode() {
     return request({
-        url: baseUrl + "/set/qqvip/getQrImage",
+        url: baseUrl + plugUrl+"/qqvip/getQrImage",
         method: "get"
     });
 }
@@ -474,7 +491,7 @@ export function getQQVipQrCode() {
  */
 export function getQQVipQrCodeStatus() {
     return request({
-        url: baseUrl + "/set/qqvip/checkQrCodeStatus",
+        url: baseUrl + plugUrl+"/qqvip/checkQrCodeStatus",
         method: "get"
     });
 }
@@ -484,7 +501,7 @@ export function getQQVipQrCodeStatus() {
  */
 export function refreshQQvipCookie() {
     return request({
-        url: baseUrl + "/set/qqvip/refreshQQvipCookie",
+        url: baseUrl + plugUrl+"/qqvip/refreshQQvipCookie",
         method: "get"
     });
 }

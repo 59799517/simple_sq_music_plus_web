@@ -1,8 +1,7 @@
 <script setup>
-import {CheckmarkCircleOutline,WarningOutline,EllipsisHorizontalCircle} from "@vicons/ionicons5";
-import TopWitge from "./TopWitge.vue";
 import { NButton, NTag,  useMessage,NSpace } from 'naive-ui'
 import {h, ref,inject } from 'vue'
+import configInfoStore from "../stores/config";
 
 
 import {
@@ -10,10 +9,8 @@ import {
   delErrorTask,
   delSuccessTask,
   delWaitingTask,
-  getDownloadInfo,
   postDownloadInfo,
   refreshTask,
-  selectOption,
   delDownloadInfo,
   refreshStatus
 } from "../utils/api.js";
@@ -21,56 +18,91 @@ import {
 
 
 
+const stconfigInfoStore =configInfoStore()
 
 
 //页面设置
 let columns = [
   {
-    title: '更多',
-    type: "expand",
-    width: 30,
-    expandable: (rowData) => rowData.status === "error",
-    renderExpand: (rowData) => {
-      return `错误信息：${rowData.downloadMsg}`;
-    }
-  },
-  {
     title: '音乐名称',
     key: 'downloadMusicname',
     width: 100,
-    ellipsis: true,
+    ellipsis: {
+      tooltip: true
+    },
     align: 'left'
   },
   {
     title: '歌手',
     key: 'downloadArtistname',
     width: 100,
-    ellipsis: true,
+    ellipsis: {
+      tooltip: true
+    },
     align: 'left'
   },
   {
     title: '专辑',
     key: 'downloadAlbumname',
     width: 100,
-    ellipsis: true,
+    ellipsis: {
+      tooltip: true
+    },
   }
   ,{
     title: '数据来源',
-    key: 'downloadType',
+    key: 'downloadPlugName',
     width: 50,
+    ellipsis: {
+      tooltip: true
+    },
+  }
+  ,{
+    title: '是否书籍类型',
+    key: 'audioBook',
+    width: 50,
+    ellipsis: {
+      tooltip: true
+    },
+    render(row) {
+      return h(NTag, {
+        closable: false,
+        type: 'success',
+        disabled : true,
+        bordered : false,
+        strong : true
+      }, () => h('span', {}, row.audioBook===1 ? '是' : '否'))
+    }
+  }
+  ,{
+    title: '下载时间',
+    key: 'downloadTime',
+    width: 100,
+    ellipsis: {
+      tooltip: true
+    },
+  }
+  ,{
+    title: '更新时间',
+    key: 'downloadUpdateTime',
+    width: 100,
     ellipsis: true,
   }
   ,{
-    title: '添加时间',
-    key: 'downloadTime',
-    width: 100,
-    ellipsis: true,
+    title: '下载消息',
+    key: 'downloadMsg',
+    width: 50,
+    ellipsis: {
+      tooltip: true
+    },
   }
   ,{
     title: '下载类型',
     key: 'downloadBrType',
     width: 50,
-    ellipsis: true,
+    ellipsis: {
+      tooltip: true
+    },
     render(row) {
       return h(NTag, {
         closable: false,
@@ -83,32 +115,34 @@ let columns = [
   }
   ,{
     title: '状态',
-    key: 'status',
+    key: 'downloadStatus',
     width: 50,
-    ellipsis: true,
+    ellipsis: {
+      tooltip: true
+    },
     render(row) {
-      if (row.status==="waiting"){
+      if (row.downloadStatus==="waiting"){
         return h(NButton, {
           type: 'info',
           size: 'small',
           strong : true,
           disabled : true,
         }, () => h('span', {}, '等待下载'))
-      }else if (row.status==="loading"){
+      }else if (row.downloadStatus==="loading"){
         return h(NButton, {
           type: 'info',
           size: 'small',
           strong : true,
           disabled : true,
         }, () => h('span', {}, '下载中'))
-      }else if (row.status==="success"){
+      }else if (row.downloadStatus==="success"){
         return h(NButton, {
           type: 'success',
           size: 'small',
           strong : true,
           disabled : true,
         }, () => h('span', {}, '下载成功'))
-      }else if (row.status==="error"){
+      }else if (row.downloadStatus==="error"){
         return h(NButton, {
           type: 'error',
           size: 'small',
@@ -123,6 +157,9 @@ let columns = [
     key: 'action',
     width: 50,
     align: 'left',
+    ellipsis: {
+      tooltip: true
+    },
     render(row) {
 
     let delbutton   = h(NButton, {
@@ -137,6 +174,8 @@ let columns = [
             }else{
               window.$message.error("操作失败："+value.data.msg)
             }
+            getDownloadData()
+
           })
         },
       }, () => h('span', {}, '删除'))
@@ -154,20 +193,22 @@ let columns = [
           }else{
             window.$message.error("操作失败："+value.data.msg)
           }
-        })
+           getDownloadData()
+
+         })
 
         }
       }, () => h('span', {}, '重新下载'))
 
-      if (row.status==="waiting"){
+      if (row.downloadStatus==="waiting"){
           return delbutton
-      }else if (row.status==="loading"){
+      }else if (row.downloadStatus==="loading"){
         return [
           delbutton
         ]
-      }else if (row.status==="success"){
+      }else if (row.downloadStatus==="success"){
         return delbutton
-      }else if (row.status==="error"){
+      }else if (row.downloadStatus==="error"){
         return     h(NSpace,{
           style: {
             // marginLeft: '10px'
@@ -207,6 +248,10 @@ let download_time_value = ref([])
 let download_time_start_value = ''
 let download_time_end_value = ''
 
+// 加载状态
+let show_spin = ref(false)
+
+
 
 
 // 下载状态列表
@@ -243,6 +288,7 @@ let select_download_type_options = ref([
 ])
 
 
+
 let shortcuts =  {
       昨天: () => (/* @__PURE__ */ new Date()).getTime() - 24 * 60 * 60 * 1e3,
       近2小时: () => {
@@ -252,26 +298,27 @@ let shortcuts =  {
 }
 // 初始化
 onBeforeMount(()=>{
-
-  /**
-   * 初始化搜索类型选项
-   */
-  selectOption().then(value => {
-    console.log(value)
-    nextTick(()=>{
-      select_download_type_options.value.push(...value.data.data)
-      getDownloadData()
-    })
-
-
-  })
-
+  select_download_type_options.value.push(...stconfigInfoStore.getOption)
+  getDownloadData()
 })
 
 let getDownloadData = ()=>{
-  postDownloadInfo(keyword_music_value.value,keyword_artis_value.value,keyword_album_value.value,download_type_value.value,false,download_status_value.value,download_time_start_value,download_time_end_value,pageSizes.value,page_index.value).then(value=>{
+  window.$loadingBar.start()
+  show_spin.value=true;
+  postDownloadInfo(
+      keyword_music_value.value,
+      keyword_artis_value.value,
+      keyword_album_value.value,
+      download_type_value.value,
+      download_status_value.value,
+      download_time_start_value,
+      download_time_end_value,
+      pageSizes.value,
+      page_index.value).then(value=>{
+    show_spin.value=false;
     item_total.value = value.data.data.total
     page_data.value = value.data.data.records;
+    window.$loadingBar.finish()
   })
 }
 
@@ -339,26 +386,7 @@ let delWaitingTask_b =()=>{
     }
   })
 }
-let againTask_b =()=>{
-  window.$dialog.warning({
-    title: '警告',
-    content: '确定执行此操作？',
-    positiveText: '确定',
-    negativeText: '取消',
-    onPositiveClick: () => {
-      againTask().then(value=>{
-        if (value.data.code===200){
-          window.$message.success("操作成功")
-        }else{
-          window.$message.error("操作失败："+value.data.msg)
-        }
-      })
-    },
-    onNegativeClick: () => {
 
-    }
-  })
-}
 let refreshTask_b =()=>{
   window.$dialog.warning({
     title: '警告',
@@ -401,8 +429,7 @@ let update_download_status=(value, option)=>{
 </script>
 
 <template>
-  <TopWitge/>
-
+  <n-spin :show="show_spin">
   <n-form  @keyup.enter.native="getDownloadData"   >
       <n-flex justify="space-between" inline="inline">
     <n-form-item label="歌名" >
@@ -547,6 +574,7 @@ let update_download_status=(value, option)=>{
     </n-card>
     <n-back-top :right="100" :visibility-height="100" />
   </div>
+  </n-spin>
 </template>
 
 <style scoped>

@@ -14,7 +14,7 @@ import {
   getQQVipQrCodeStatus,
   refreshQQvipCookie
 } from "../utils/api.js";
-import TopWitge from "./TopWitge.vue";
+import TopWitge from "./V3TopWitge.vue";
 
 
 
