@@ -10,6 +10,8 @@ import {
   refreshQQvipCookie,
   getKgWxQrCodeStatus, getKgQrCodeStatus, kgRefreshToken, kgSign,getQQVipQrCodeStatus
 } from "../utils/api.js"; //引入仓库
+import Cookies from 'js-cookie';
+
 import { setAuthSending } from "../utils/request.js";
 import userInfoStore from "../stores/user";
 import configInfoStore from "../stores/config";
@@ -189,9 +191,10 @@ let clogout=() => {
       // 禁用发送认证信息
       setAuthSending(false)
       // 清空cookie
-      window.document.cookie=""
-      window.document.cookie="sqmusic=;path=/";
-      window.document.cookie="token=;path=/";
+      console.log("Cookies.get('sqmusic'):"+Cookies.get('sqmusic'))
+      Cookies.get("Cookies.get('token'):"+Cookies.get('token'))
+      Cookies.set('sqmusic', '');
+      Cookies.set('token', '');
       window.location.href="/"
     }else{
       window.$message.error("退出失败："+value.data.msg)
