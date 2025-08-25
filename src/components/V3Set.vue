@@ -188,11 +188,9 @@ let clogout=() => {
       window.$message.success("退出成功")
       stuserInfoStore.clearUserInfo()
       stconfigInfoStore.clearData()
-      // 禁用发送认证信息
-      setAuthSending(false)
       // 清空cookie
       console.log("Cookies.get('sqmusic'):"+Cookies.get('sqmusic'))
-      Cookies.get("Cookies.get('token'):"+Cookies.get('token'))
+      console.log("Cookies.get('token'):"+Cookies.get('token'))
       Cookies.set('sqmusic', '');
       Cookies.set('token', '');
       window.location.href="/"
