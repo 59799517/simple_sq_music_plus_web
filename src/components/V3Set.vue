@@ -166,6 +166,8 @@ if (tempModalKeyNullCheck.value===1){
           stconfigInfoStore.clearData()
           stconfigInfoStore.setData(value.data.data)
           // configData.value=value.data.data
+
+
           refreshData()
         }else{
           window.$message.error("错误信息："+"获取整体设置失败检查服务器是否异常！")
@@ -188,6 +190,8 @@ let clogout=() => {
       setAuthSending(false)
       // 清空cookie
       window.document.cookie=""
+      window.document.cookie="sqmusic=;path=/";
+      window.document.cookie="token=;path=/";
       window.location.href="/"
     }else{
       window.$message.error("退出失败："+value.data.msg)
