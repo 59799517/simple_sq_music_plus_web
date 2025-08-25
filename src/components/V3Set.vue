@@ -10,7 +10,7 @@ import {
   refreshQQvipCookie,
   getKgWxQrCodeStatus, getKgQrCodeStatus, kgRefreshToken, kgSign,getQQVipQrCodeStatus
 } from "../utils/api.js"; //引入仓库
-
+import { setAuthSending } from "../utils/request.js";
 import userInfoStore from "../stores/user";
 import configInfoStore from "../stores/config";
 import {storeToRefs} from "pinia";
@@ -184,6 +184,8 @@ let clogout=() => {
       window.$message.success("退出成功")
       stuserInfoStore.clearUserInfo()
       stconfigInfoStore.clearData()
+      // 禁用发送认证信息
+      setAuthSending(false)
       // 清空cookie
       window.document.cookie=""
       window.location.href="/"
