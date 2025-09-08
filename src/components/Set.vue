@@ -12,7 +12,9 @@ import {
   getKgWxQrCodeStatus,
   getQQVipQrCode,
   getQQVipQrCodeStatus,
-  refreshQQvipCookie
+  refreshQQvipCookie,
+  getBaseUrl
+
 } from "../utils/api.js";
 import TopWitge from "./TopWitge.vue";
 
@@ -247,11 +249,21 @@ let refreshQQvipCookiec=()=>{
   })
 }
 
+let exportSongList = () => {
+
+  console.log("访问路径是："+getBaseUrl()+"/set/exportSongList")
+  window.open(getBaseUrl()+"/set/exportSongList")
+
+}
+
 
 </script>
 
 <template>
   <TopWitge/>
+  <n-card title="导出">
+    <n-button @click="exportSongList">导出歌单设置</n-button>
+  </n-card>
   <n-card title="设置">
     <n-card title="Toekn和插件（freeMp3关停暂时用不到了）">
       <p>   插件url：↑↑↑↑↑↑↑↑↑↑↑↑（浏览器显示这个复制上 http://xxxxx:xxx 只要这一段即可 /#后边的不要）↑↑↑↑↑↑↑↑↑↑↑↑↑</p>

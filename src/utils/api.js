@@ -1,10 +1,14 @@
 import request from "./request.js";
 import qs from "qs";
 
-// const baseUrl = 'http://127.0.0.1:8099'
-const baseUrl = ''
+const baseUrl = 'http://127.0.0.1:8099'
+// const baseUrl = ''
 //
 // const baseUrl = '/sqmusic-api'
+
+
+
+
 
 /**
  * 登录
@@ -487,5 +491,8 @@ export function refreshQQvipCookie() {
         url: baseUrl + "/set/qqvip/refreshQQvipCookie",
         method: "get"
     });
+}
+export function getBaseUrl() {
+    return baseUrl;
 }
 
