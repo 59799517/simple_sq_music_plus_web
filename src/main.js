@@ -5,4 +5,8 @@ import {router} from './router/index.js'
 import pinia from './stores'  //引入
 
 
-createApp(App).use(pinia).use(router).mount('#app')
+
+const playerData = reactive({
+})
+
+createApp(App).use(pinia).use(router).provide('playerData', playerData).mount('#app')

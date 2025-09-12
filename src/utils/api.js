@@ -1,8 +1,8 @@
 import request from "./request.js";
 import qs from "qs";
 
-// const baseUrl = 'http://127.0.0.1:8099'
-const baseUrl = ''
+const baseUrl = 'http://127.0.0.1:8099'
+// const baseUrl = ''
 
 
 const configUrl = "/api/config"
@@ -108,6 +108,30 @@ export function searchTips(plugName,keyword) {
         params:{"plugName":plugName,"keyword":keyword}
     });
 }
+
+/**
+ * 获取歌曲播放链接
+ */
+export function getMusicUrl(data,brType) {
+    data["brType"] = brType;
+    return request({
+        url: baseUrl +musicUrl+ "/getDownloadUrl",
+        method: "post",
+        data:data
+    });
+}
+/**
+ * 获取歌曲播放链接
+ */
+export function getLyric(id,plugName) {
+    return request({
+        url: baseUrl +musicUrl+ "/getLyric",
+        method: "post",
+        data: {"id":id,"plugName":plugName}
+    });
+}
+
+
 
 
 /**
@@ -504,5 +528,11 @@ export function refreshQQvipCookie() {
         url: baseUrl + plugUrl+"/qqvip/refreshQQvipCookie",
         method: "get"
     });
+}
+/**
+ * 上传json文件
+ */
+export function getUploadJsonFileUrl() {
+    return baseUrl + configUrl+"/importSongList"
 }
 

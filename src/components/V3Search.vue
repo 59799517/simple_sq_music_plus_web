@@ -1,11 +1,41 @@
 <script setup lang="js">
-import {ref, nextTick, h,defineComponent} from 'vue'
+import {ref, nextTick, h,defineComponent,inject,watch ,watchEffect  } from 'vue'
 import configInfoStore from "../stores/config";
+import playListStore from "../stores/playList";
 import {searchTips, musicSearch, musicDownload} from "../utils/api.js";
 import {NButton, NSpace,NTag,NImage} from "naive-ui";
+import {storeToRefs} from "pinia";
 
 
 const stconfigInfoStore =configInfoStore()
+const stplayListStore =playListStore()
+
+let nowPlay = ref({})
+
+// 监听 当前播放ID 的变化
+watch(
+    () => stplayListStore.id,
+    (newValue, oldValue) => {
+      nowPlay.value = {
+        albumName : stplayListStore.albumName,
+        albumid : stplayListStore.albumid,
+        artistName : stplayListStore.artistName,
+        artistids : stplayListStore.artistids,
+        brTypes : stplayListStore.brTypes,
+        duration : stplayListStore.duration,
+        id : stplayListStore.id,
+        lyric : stplayListStore.lyric,
+        lyricId : stplayListStore.lyricId,
+        name : stplayListStore.name,
+        pic : stplayListStore.pic,
+        plugName : stplayListStore.plugName,
+      }
+      console.log(`播放id 从 ${oldValue} 变为 ${newValue}`);
+    },
+    {
+      deep: true
+    }
+);
 
 
 // 搜索关键字
@@ -262,7 +292,12 @@ let TableColumns = [
             ghost: true,
             type: 'success',
             onClick: () => {
-              console.log("点击下载按钮："+JSON.stringify(row))
+              // console.log("点击下载按钮："+JSON.stringify(row))
+              stplayListStore.pushPlayListAndPlay(row)
+              console.log("当前播放信息："+JSON.stringify(nowPlay.value))
+
+
+
               // delDownloadInfo(row.id).then(value=>{
               //   if (value.data.code===200){
               window.$message.success("操作成功点击了："+"播放")
@@ -316,9 +351,8 @@ let update_select_type=(value, option)=>{
 <template>
 
     <n-spin :show="show_spin">
-  <div style="width: 100%;
-" ref="loadingBarTargetRef">
-  <n-form
+   <div>
+    <n-form
       inline
       @keyup.enter.native="onSecrch"
       style="width: 100%;"
@@ -356,15 +390,12 @@ let update_select_type=(value, option)=>{
             搜索
           </n-button>
         </div>
-
       </div>
-      <n-divider />
-
+<!--      <n-divider />-->
       <!--表格数据行-->
-      <div class="sqRow" v-if="list_data.length>0">
+      <div class="sqRow" >
         <n-data-table
-
-
+            :flex-height="false"
             :key="(row) => row.id"
             :bordered="false"
             :single-line="false"
@@ -386,8 +417,7 @@ let update_select_type=(value, option)=>{
 
 
   </n-form>
-
-  </div>
+   </div>
 
     </n-spin>
 </template>
@@ -416,5 +446,9 @@ let update_select_type=(value, option)=>{
 .hover-hand {
   cursor: pointer;
   transition: all 0.3s ease;
+}
+:deep(.n-data-table__pagination) {
+  display: flex !important;
+  justify-content: center !important;
 }
 </style>

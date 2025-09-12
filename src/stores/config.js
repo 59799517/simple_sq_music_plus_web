@@ -5,6 +5,9 @@ const configInfoStore = defineStore('configInfo', {
         data: [],
         option: [],
         version: '',
+        float_bottom: 50,
+        float_left:300 ,
+
     }),
     getters: {
         getData: (state) => state.data,
