@@ -488,7 +488,6 @@ watch(() => stplayListStore.playList, (newPlayList) => {
 })
 
 // 创建一个新的 ref 用于约束 Motion 组件
-const motionConstraintsRef = ref(null)
 const motionElementRef = ref(null)
 // 使用绝对坐标体系（相对于视口）
 const motionPosition = ref({
@@ -499,6 +498,8 @@ const motionPosition = ref({
 // 添加实时位置信息
 // const motionLivePosition = ref({ x: 0, y: 0 })
 let isDragging = ref(false)
+// 添加一个 ref 来控制 popover 的显示
+const showPopover = ref(true)
 
 // 处理拖拽过程中的位置更新
 const handleDrag = (event) => {
@@ -522,6 +523,7 @@ const handleDrag = (event) => {
 // 处理拖拽开始
 const handleDragStart = (event) => {
   isDragging.value = true;
+  showPopover.value = false; // 开始拖拽时隐藏 popover
   // 阻止默认行为
   event.preventDefault();
 }
@@ -531,6 +533,10 @@ const handleDragEnd = (event) => {
   if (!isDragging.value) return;
 
   isDragging.value = false;
+  // 延迟显示 popover，避免拖拽结束后立即显示
+  setTimeout(() => {
+    showPopover.value = true;
+  }, 100);
 
   // 计算最终位置
   const position = {
@@ -617,7 +623,7 @@ const handleMouseLeave = (event) => {
       @close="hideSongDetail"
       @seek="seekTo"
     />
-    <div ref="motionConstraintsRef"   v-if="nowplayList.length > 0" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 999;">      <div
+    <div    v-if="nowplayList.length > 0" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 999;">      <div
           ref="motionElementRef"
           style="width: 60px; height: 60px; cursor: grab; pointer-events: auto; position: fixed; top: 0; left: 0; transition: transform 0.3s ease;"
           :style="{ transform: `translate(${motionPosition.x}px, ${motionPosition.y}px)` }"
@@ -625,26 +631,23 @@ const handleMouseLeave = (event) => {
           @mouseenter="handleMouseEnter"
           @mouseleave="handleMouseLeave"
       >
-        <div style="width: 100%; height: 100%; position: relative;">
-
-          <n-tooltip
-              placement="bottom"
-              trigger="hover"
-              :show-arrow="false"
-          >
-            <template #trigger>
-              <n-avatar
-                  size="large"
-                  :round="true"
-                  :src="nowPlay.pic||'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
-                  :class="[
+      <div style="width: 100%; height: 100%; position: relative;">
+        <n-popover  placement="bottom"
+                    trigger="hover"
+                    :show-arrow="false"
+                    :disabled="!showPopover">
+          <template #trigger>
+            <n-avatar
+                size="large"
+                :round="true"
+                :src="nowPlay.pic||'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
+                :class="[
             'rotating-avatar',
             { 'paused': !stplayListStore.isPlaying }
           ]"
-                  @error="handleImageError"
-                  style="width: 100%; height: 100%;"
-              />
-            </template>
+                @error="handleImageError"                  style="width: 100%; height: 100%;"
+            />
+          </template>
             <n-card  size="small" style="width: 500px;cursor:default">
 
               <template #header>
@@ -719,7 +722,8 @@ const handleMouseLeave = (event) => {
                 </n-list-item>
               </n-list>
             </n-card>
-          </n-tooltip>
+          </n-popover>
+
           <!-- 添加实时位置信息显示（使用绝对坐标） -->
 <!--          <div-->
 <!--            v-show="isDragging"-->

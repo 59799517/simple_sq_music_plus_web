@@ -6,6 +6,7 @@ import pinia from './stores'  //引入
 
 
 
+
 const playerData = reactive({
 })
 

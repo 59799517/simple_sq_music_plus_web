@@ -16,12 +16,7 @@ const emit = defineEmits(['close', 'seek'])
 // 使用播放列表存储
 const store = usePlayListStore()
 
-// 歌词拖拽相关变量
-const isLyricsDragging = ref(false)
-const dragStartY = ref(0)
-const dragStartScrollTop = ref(0)
 const lyricsContainerRef = ref(null)
-const isLyricsScrolling = ref(false) // 标记是否正在手动滚动歌词
 
 // 监听键盘事件
 const handleKeydown = (event) => {
@@ -92,17 +87,21 @@ const currentSong = computed(() => {
   }
 })
 
+// 计算属性：背景样式
+const backgroundStyle = computed(() => {
+  return {
+    backgroundImage: `url(${currentSong.value.pic || 'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat'
+  }
+})
+
 // 格式化时间显示 (秒转为 mm:ss)
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
-// 格式化tooltip显示的时间
-const formatTooltip = (percentage) => {
-  const timeInSeconds = (percentage / 100) * store.totalTime
-  return formatTime(timeInSeconds)
 }
 
 // 计算进度条百分比
@@ -116,6 +115,12 @@ const currentPlayTime = computed(() => {
   return (sliderPercentage.value / 100) * store.totalTime
 })
 
+// 格式化tooltip显示的时间
+const formatTooltip = (percentage) => {
+  const timeInSeconds = (percentage / 100) * store.totalTime
+  return formatTime(timeInSeconds)
+}
+
 // 用于slider的本地响应式变量
 const sliderPercentage = ref(0)
 
@@ -123,15 +128,14 @@ const sliderPercentage = ref(0)
 const isDragging = ref(false)
 
 // 监听播放进度变化，更新slider值（但不覆盖用户正在拖动时的值）
-watch(() => progressPercentage.value, (newPercentage) => {
-  // 只有在没有拖动时才更新slider值
-  if (!isDragging.value) {
-    sliderPercentage.value = newPercentage
-  }
-})
-
-// 监听当前播放时间变化，更新当前歌词索引
+// 同时更新当前歌词索引
 watch(() => store.currentTime, (newTime) => {
+  // 更新进度条（但不覆盖用户正在拖动时的值）
+  if (!isDragging.value) {
+    sliderPercentage.value = progressPercentage.value
+  }
+
+  // 更新当前歌词索引
   if (lyricsList.value.length > 0) {
     let index = -1
     for (let i = 0; i < lyricsList.value.length; i++) {
@@ -183,78 +187,50 @@ const playNext = () => {
   store.playNext()
 }
 
-
-
-// 监听歌词变化
-watch(() => store.lyric, (newLyric, oldLyric) => {
+// 监听歌词变化和当前歌词索引变化
+watch([() => store.lyric, currentLyricIndex], ([newLyric, oldLyric], [newIndex]) => {
   if (newLyric !== oldLyric) {
     lyricsList.value = parseLyrics(newLyric)
   }
-}, {immediate: true})
 
-// 监听当前歌词索引变化，滚动到当前歌词
-watch(currentLyricIndex, () => {
+  // 滚动到当前歌词
   scrollToCurrentLyric()
 })
 
-// 开始拖拽歌词
-const startLyricsDrag = (event) => {
-  isLyricsDragging.value = true
-  const container = lyricsContainerRef.value.querySelector('.lyrics-content')
-  dragStartY.value = event.touches ? event.touches[0].clientY : event.clientY
-  dragStartScrollTop.value = container.scrollTop
-  event.preventDefault()
-}
+// 创建防抖版本的滚动到当前歌词函数
+let scrollDebounceTimer = null
+const scrollToCurrentLyric = () => {
+  // 清除之前的定时器
+  if (scrollDebounceTimer) {
+    clearTimeout(scrollDebounceTimer)
+  }
 
-// 拖拽过程中
-const onLyricsDrag = (event) => {
-  if (!isLyricsDragging.value) return
+  // 设置新的定时器，延迟执行滚动操作
+  scrollDebounceTimer = setTimeout(() => {
+    nextTick(() => {
+      // 添加检查确保 lyricsContainerRef 和其子元素存在
+      if (!lyricsContainerRef.value) return
 
-  const container = lyricsContainerRef.value.querySelector('.lyrics-content')
-  const currentY = event.touches ? event.touches[0].clientY : event.clientY
-  const diff = dragStartY.value - currentY
-  container.scrollTop = dragStartScrollTop.value + diff
+      const lyricsContainer = lyricsContainerRef.value.querySelector('.lyrics-content')
+      if (!lyricsContainer) return
 
-  event.preventDefault()
-}
+      const currentLyricElement = lyricsContainer.querySelector('.lyric-line.current')
 
-// 结束拖拽
-const endLyricsDrag = () => {
-  isLyricsDragging.value = false
+      if (lyricsContainer && currentLyricElement) {
+        const containerHeight = lyricsContainer.clientHeight
+        const elementTop = currentLyricElement.offsetTop
+        const elementHeight = currentLyricElement.clientHeight
+
+        // 滚动使当前歌词居中
+        lyricsContainer.scrollTop = elementTop - containerHeight / 2 + elementHeight / 2
+      }
+    })
+  }, 300) // 100ms的防抖延迟
 }
 
 // 点击歌词跳转到指定时间
 const handleLyricClick = (time) => {
-  // 如果正在拖拽歌词，则不处理点击事件
-  if (isLyricsDragging.value) {
-    return
-  }
   emit('seek', time)
-}
-
-// 滚动到当前歌词
-const scrollToCurrentLyric = () => {
-  // 如果正在拖拽，则不自动滚动
-  if (isLyricsDragging.value) return
-
-  nextTick(() => {
-    // 添加检查确保 lyricsContainerRef 和其子元素存在
-    if (!lyricsContainerRef.value) return
-
-    const lyricsContainer = lyricsContainerRef.value.querySelector('.lyrics-content')
-    if (!lyricsContainer) return
-
-    const currentLyricElement = lyricsContainer.querySelector('.lyric-line.current')
-
-    if (lyricsContainer && currentLyricElement) {
-      const containerHeight = lyricsContainer.clientHeight
-      const elementTop = currentLyricElement.offsetTop
-      const elementHeight = currentLyricElement.clientHeight
-
-      // 滚动使当前歌词居中
-      lyricsContainer.scrollTop = elementTop - containerHeight / 2 + elementHeight / 2
-    }
-  })
 }
 
 // 音量控制相关变量
@@ -304,10 +280,19 @@ const toggleMute = () => {
 
 <template>
   <div v-if="visible" class="music-detail-overlay">
+    <div class="background-blur" :style="backgroundStyle"></div>
     <div class="music-detail-container">
       <!-- 关闭按钮 -->
       <n-icon class="close-button" @click="emit('close')">
-        <i class="iconfont icon-close" style="font-size: 30px">&#xf02a9;</i>
+        <Motion
+            :hover="{
+      scale: 1.6,
+    }"
+        >
+          <i class="iconfont icon-close" style="font-size: 30px">&#xf02a9;</i>
+
+        </Motion>
+
       </n-icon>
 
       <div class="content-wrapper">
@@ -481,10 +466,23 @@ const toggleMute = () => {
   align-items: center;
 }
 
+.background-blur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: blur(30px) brightness(0.6);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -1;
+}
+
 .music-detail-container {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #2c3e50, #1a1a2e);
+  background: rgba(0, 0, 0, 0.3); /* 调整背景透明度，让模糊背景更明显 */
   border-radius: 0;
   overflow: hidden;
   position: relative;
@@ -573,12 +571,8 @@ const toggleMute = () => {
   flex-direction: column;
   justify-content: center;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background-color: transparent;
   padding: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .lyrics-container {
@@ -587,12 +581,12 @@ const toggleMute = () => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  border: none;
   outline: none;
-  padding: 60px 40px 20px 40px; /* 顶部留出关闭按钮空间 */
+  padding: 60px 40px 20px 40px;
   cursor: grab;
   user-select: none;
   overflow: hidden;
+  background-color: transparent;
 }
 
 .lyrics-container:active {
@@ -603,13 +597,13 @@ const toggleMute = () => {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  /* 移除之前的背景色，使用父容器的毛玻璃效果 */
   border-radius: 12px;
   max-height: 100%;
   position: relative;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  overflow-y: scroll; /* 强制显示滚动条以支持拖拽 */
+  overflow-y: scroll;
+  background-color: transparent;
 }
 
 .lyric-line {

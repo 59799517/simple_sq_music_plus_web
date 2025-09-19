@@ -1,5 +1,4 @@
 <script setup>
-
 import {
   getAllSet,
   updateConfig,
@@ -11,6 +10,7 @@ import {
   getKgWxQrCodeStatus, getKgQrCodeStatus, kgRefreshToken, kgSign,getQQVipQrCodeStatus,getUploadJsonFileUrl
 } from "../utils/api.js"; //引入仓库
 import Cookies from 'js-cookie';
+import { inject } from 'vue';
 
 import userInfoStore from "../stores/user";
 import configInfoStore from "../stores/config";
@@ -18,6 +18,9 @@ import {storeToRefs} from "pinia";
 const stuserInfoStore = userInfoStore();
 const stconfigInfoStore =configInfoStore()
 const { loginDevice,username, token } = storeToRefs(stuserInfoStore); // 响应式
+
+// 注入切换主题方法
+const changetheme = inject("changetheme");
 
 //设置分组
 let configData = ref([]);
@@ -79,9 +82,6 @@ let refreshData= () => {
       window.$message.error("错误信息："+"获取整体设置失败检查服务器是否异常！")
     }
   })
-
-
-
 }
 //刷新数据
 refreshData();
@@ -426,6 +426,8 @@ let  handleFinish = ({
     <div style="display: flex;flex-direction: column;width: 100%" >
       <n-p>token：{{token}}</n-p>
       <n-p>username：{{username}}</n-p>
+      <n-button @click="changetheme">切换主题</n-button>
+
       <div style="width: 100%; display: flex; flex-direction: column;">
         <n-upload
             style="width: 100%;"
