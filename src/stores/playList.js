@@ -74,10 +74,24 @@ export const usePlayListStore = defineStore("playList", {
             this.playList.push(data)
             this.playIndex = this.playList.length-1
         },
-        pushPlayListAndPlay(data) {
-            this.pushPlayList(data)
-            this.playIndex = this.playList.length-1
-            this.setPlayIndex(this.playIndex)
+        async pushPlayListAndPlay(data) {
+            // 先尝试获取播放链接，如果失败则不加入播放队列
+            try {
+                const response = await getMusicUrl(data, data.brTypes[0]);
+                if (response.data.code === 200) {
+                    this.pushPlayList(data)
+                    this.playIndex = this.playList.length-1
+                    this.setPlayIndex(this.playIndex)
+                } else {
+                    console.error("获取播放链接失败:", response.data.msg);
+                    window.$message.error("获取播放链接失败: " + response.data.msg);
+                    return false; // 返回失败状态
+                }
+            } catch (error) {
+                console.error("获取播放链接时发生错误:", error);
+                window.$message.error("获取播放链接时发生错误");
+                return false; // 返回失败状态
+            }
         },
         clearPlayList() {
             this.playList = []
@@ -137,6 +151,7 @@ export const usePlayListStore = defineStore("playList", {
                 this.setPlayIndex(newIndex);
             }
         },
+
         // 获取歌曲播放链接
         async fetchMusicUrl(songData) {
             try {
@@ -160,10 +175,6 @@ export const usePlayListStore = defineStore("playList", {
                             }
                         }
                     });
-
-
-
-
                     // 设置自动播放标志，但不立即初始化音频
                     this.shouldAutoPlay = true;
                 } else {

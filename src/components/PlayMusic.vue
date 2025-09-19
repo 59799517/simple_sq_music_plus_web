@@ -1,7 +1,8 @@
-<script setup lang="js">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import { NImage, NText, NSpace, NButton, NIcon, NSlider } from 'naive-ui'
-import { usePlayListStore } from '../stores/playList'
+<script lang="js" setup>
+import {ref, onMounted, onUnmounted, computed, watch, nextTick} from 'vue'
+import {NImage, NText, NSpace, NButton, NIcon, NSlider} from 'naive-ui'
+import {usePlayListStore} from '../stores/playList'
+import '../assets/icons/iconfont.css';
 
 const props = defineProps({
   visible: {
@@ -34,6 +35,7 @@ const handleKeydown = (event) => {
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   lyricsList.value = parseLyrics(store.lyric)
+  volumePercentage.value = store.volume * 100
 })
 
 // 组件卸载时移除键盘事件监听器
@@ -156,9 +158,9 @@ const handleUpdateSliderValue = (value) => {
 const handleProgressChange = () => {
   // 计算实际时间并跳转
   const newTime = (sliderPercentage.value / 100) * store.totalTime
-  console.log("结束正在更新进度："+ sliderPercentage.value)
-  console.log("结束返回的值："+ sliderPercentage.value)
-  console.log("计算出的实际时间："+ newTime)
+  console.log("结束正在更新进度：" + sliderPercentage.value)
+  console.log("结束返回的值：" + sliderPercentage.value)
+  console.log("计算出的实际时间：" + newTime)
 
   // 直接调用Home.vue中的seek方法而不是仅仅更新store
   // 通过事件传递给Home.vue来执行实际的跳转操作
@@ -181,19 +183,14 @@ const playNext = () => {
   store.playNext()
 }
 
-// 监听歌曲ID变化，重新解析歌词
-watch(() => store.id, (newId, oldId) => {
-  if (newId !== oldId) {
-    lyricsList.value = parseLyrics(store.lyric)
-  }
-}, { immediate: true })
+
 
 // 监听歌词变化
 watch(() => store.lyric, (newLyric, oldLyric) => {
   if (newLyric !== oldLyric) {
     lyricsList.value = parseLyrics(newLyric)
   }
-}, { immediate: true })
+}, {immediate: true})
 
 // 监听当前歌词索引变化，滚动到当前歌词
 watch(currentLyricIndex, () => {
@@ -241,7 +238,12 @@ const scrollToCurrentLyric = () => {
   if (isLyricsDragging.value) return
 
   nextTick(() => {
+    // 添加检查确保 lyricsContainerRef 和其子元素存在
+    if (!lyricsContainerRef.value) return
+
     const lyricsContainer = lyricsContainerRef.value.querySelector('.lyrics-content')
+    if (!lyricsContainer) return
+
     const currentLyricElement = lyricsContainer.querySelector('.lyric-line.current')
 
     if (lyricsContainer && currentLyricElement) {
@@ -255,6 +257,49 @@ const scrollToCurrentLyric = () => {
   })
 }
 
+// 音量控制相关变量
+const volumePercentage = ref(0)
+const isVolumeDragging = ref(false)
+
+// 监听音量变化
+watch(() => store.volume, (newVolume) => {
+  if (!isVolumeDragging.value) {
+    volumePercentage.value = newVolume * 100
+  }
+})
+
+// 处理开始拖动音量
+const handleVolumeDragStart = () => {
+  isVolumeDragging.value = true
+}
+
+// 处理音量滑块更新
+const handleUpdateVolumeValue = (value) => {
+  volumePercentage.value = value
+}
+
+// 处理音量变化
+const handleVolumeChange = () => {
+  const newVolume = volumePercentage.value / 100
+  store.setVolume(newVolume)
+  isVolumeDragging.value = false
+}
+
+// 添加静音切换方法
+const previousVolume = ref(50) // 保存之前的音量值
+
+const toggleMute = () => {
+  if (volumePercentage.value === 0) {
+    // 如果当前是静音状态，恢复到之前的音量
+    volumePercentage.value = previousVolume.value
+  } else {
+    // 如果当前不是静音状态，保存当前音量并设置为0
+    previousVolume.value = volumePercentage.value
+    volumePercentage.value = 0
+  }
+  handleVolumeChange()
+}
+
 </script>
 
 <template>
@@ -262,9 +307,7 @@ const scrollToCurrentLyric = () => {
     <div class="music-detail-container">
       <!-- 关闭按钮 -->
       <n-icon class="close-button" @click="emit('close')">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
-                    </svg>
+        <i class="iconfont icon-close" style="font-size: 30px">&#xf02a9;</i>
       </n-icon>
 
       <div class="content-wrapper">
@@ -272,19 +315,21 @@ const scrollToCurrentLyric = () => {
         <div class="left-panel">
           <div class="album-art">
             <n-image
-              width="300"
-              height="300"
-              :src="currentSong.pic || 'https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg'"
-              :alt="currentSong.name"
-              preview-disabled
-              class="album-image"
+                :alt="currentSong.name"
+                :src="currentSong.pic || 'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
+                class="album-image"
+                height="300"
+                preview-disabled
+                width="300"
             />
           </div>
 
           <div class="song-info">
             <n-text class="song-title">{{ currentSong.name || '未知歌曲' }}</n-text>
             <n-text class="artist-info">
-              歌手: {{ Array.isArray(currentSong.artistName) ? currentSong.artistName.join(', ') : currentSong.artistName || '未知歌手' }}
+              歌手: {{
+                Array.isArray(currentSong.artistName) ? currentSong.artistName.join(', ') : currentSong.artistName || '未知歌手'
+              }}
             </n-text>
             <n-text class="album-info">
               专辑: {{ currentSong.albumName || '未知专辑' }}
@@ -295,25 +340,18 @@ const scrollToCurrentLyric = () => {
         <!-- 右侧：歌词信息 -->
         <div class="right-panel">
           <div
-            ref="lyricsContainerRef"
-            class="lyrics-container"
+              ref="lyricsContainerRef"
+              class="lyrics-container"
           >
             <div
-              class="lyrics-content"
-              @mousedown="startLyricsDrag"
-              @touchstart="startLyricsDrag"
-              @mousemove="onLyricsDrag"
-              @touchmove="onLyricsDrag"
-              @mouseup="endLyricsDrag"
-              @touchend="endLyricsDrag"
-              @mouseleave="endLyricsDrag"
+                class="lyrics-content"
             >
               <div
-                v-for="(line, index) in lyricsList"
-                :key="index"
-                class="lyric-line"
-                :class="{ current: index === currentLyricIndex }"
-                @click="handleLyricClick(line.time)"
+                  v-for="(line, index) in lyricsList"
+                  :key="index"
+                  :class="{ current: index === currentLyricIndex }"
+                  class="lyric-line"
+                  @click="handleLyricClick(line.time)"
               >
                 {{ line.text }}
               </div>
@@ -330,50 +368,100 @@ const scrollToCurrentLyric = () => {
         <div class="progress-container">
           <span class="time-text">{{ formatTime(currentPlayTime) }}</span>
           <n-slider
-            :value="sliderPercentage"
-            :min="0"
-            :max="100"
-            :step="0.1"
-            :format-tooltip="formatTooltip"
-            show-tooltip
-            class="progress-slider"
-            :on-dragstart="handleDragStart"
-            :on-dragend="handleProgressChange"
-            :on-update:value="handleUpdateSliderValue"
+              :format-tooltip="formatTooltip"
+              :max="100"
+              :min="0"
+              :on-dragend="handleProgressChange"
+              :on-dragstart="handleDragStart"
+              :on-update:value="handleUpdateSliderValue"
+              :step="0.1"
+              :value="sliderPercentage"
+              class="progress-slider"
+              show-tooltip
           />
           <span class="time-text">{{ formatTime(store.totalTime) }}</span>
         </div>
 
-        <div class="control-buttons">
-          <n-button circle size="large" @click="playPrevious">
-            <n-icon>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M4 4a.5.5 0 0 1 1 0v3.248l6.001-3.001a.5.5 0 0 1 .728.447V11.5a.5.5 0 0 1-.728.447L5 8.752V12a.5.5 0 0 1-1 0V4zm7.5 0a.5.5 0 0 1 1 0v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 1.5-1.5zm5 0a.5.5 0 0 1 1 0v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 1.5-1.5z"/>
-              </svg>
-            </n-icon>
-          </n-button>
+        <n-flex justify="space-between">
+          <div></div>
+          <div>
+            <n-flex justify="space-around" size="large">
+              <Motion
+                  :hover="{
+      scale: 1.6,
+    }"
+              >
+                <i class="iconfont control-icon" @click="playPrevious">&#xe69a;</i>
 
-          <n-button circle size="large" @click="togglePlay">
-            <n-icon v-if="!store.isPlaying">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
-              </svg>
-            </n-icon>
-            <n-icon v-else>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V4a1.5 1.5 0 0 1 1.5-1.5z"/>
-              </svg>
-            </n-icon>
-          </n-button>
+              </Motion>
+              <Motion
+                  v-if="!store.isPlaying"
+                  :hover="{
+      scale: 1.6,
+    }"
+              >
+                <i class="iconfont control-icon" @click="togglePlay">&#xe62d;</i>
 
-          <n-button circle size="large" @click="playNext">
-            <n-icon>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M12 3.5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5zm-5.5 0A.5.5 0 0 1 7 4v8a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5zm5 3.252V12.5a.5.5 0 0 1-.728.447L5 9.752V12.5a.5.5 0 0 1-1 0V3.5a.5.5 0 0 1 1 0v2.752l6.001-3.001A.5.5 0 0 1 12 3.698z"/>
-              </svg>
-            </n-icon>
-          </n-button>
-        </div>
+              </Motion>
+
+
+              <Motion
+                  v-else
+                  :hover="{
+      scale: 1.6,
+    }"
+              >
+                <i class="iconfont control-icon" @click="togglePlay">&#xe626;</i>
+
+              </Motion>
+
+              <Motion
+                  :hover="{
+      scale: 1.6,
+    }"
+              >
+                <i class="iconfont control-icon" @click="playNext">&#xe69b;</i>
+
+              </Motion>
+            </n-flex>
+
+          </div>
+          <div>
+            <div class="volume-control">
+              <Motion
+                  :hover="{
+      scale: 1.6,
+    }"
+              >
+                <i
+                    class="iconfont control-icon"
+                    style="font-size: 24px;"
+                    @click="volumePercentage === 0 ? (volumePercentage = 100, handleVolumeChange()) : (volumePercentage = 0, handleVolumeChange())"
+                >
+                  {{ volumePercentage === 0 ? '&#xea0f;' : '&#xeca6;' }}
+                </i>
+              </Motion>
+
+              <n-slider
+                  :max="100"
+                  :min="0"
+                  :on-dragend="handleVolumeChange"
+                  :on-dragstart="handleVolumeDragStart"
+                  :on-update:value="handleUpdateVolumeValue"
+                  :step="1"
+                  :value="volumePercentage"
+                  class="volume-slider"
+              />
+            </div>
+          </div>
+
+        </n-flex>
+        <!--        <div class="control-buttons">-->
+
+        <!--          <div class="controls-right">-->
+
+        <!--          </div>-->
+        <!--        </div>-->
       </div>
     </div>
   </div>
@@ -597,10 +685,44 @@ const scrollToCurrentLyric = () => {
 
 .control-buttons {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 50px;
+}
+
+.controls-center {
+  display: flex;
   justify-content: center;
   align-items: center;
   gap: 30px;
 }
+
+.controls-right {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 150px;
+}
+
+.volume-slider {
+  flex: 1;
+}
+
+.control-icon {
+  font-size: 40px;
+
+  color: rgba(255, 255, 255, 0.7);
+  user-select: none;
+  display: inline-block;
+}
+
 
 .control-buttons .n-button {
   background-color: rgba(255, 255, 255, 0.1);

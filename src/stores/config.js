@@ -7,6 +7,10 @@ const configInfoStore = defineStore('configInfo', {
         version: '',
         float_bottom: 50,
         float_left:300 ,
+        motionPosition: {
+            x: 0,
+            y: 0
+        }
 
     }),
     getters: {
@@ -32,11 +36,11 @@ const configInfoStore = defineStore('configInfo', {
         clearVersion() {
             this.version = ''
         },
+        setMotionPosition(position) {
+            this.motionPosition = position
+        }
     },
     persist: true,
 })
-
-
-
 
 export default configInfoStore
