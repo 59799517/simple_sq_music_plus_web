@@ -66,23 +66,32 @@ jobs:
           asset_name: ${{ env.APP_NAME }}.zip
           asset_content_type: application/zip
 
-      - name: Build the Docker image
+      - name: Login to Alibaba Cloud Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image to Alibaba Cloud
         run: |
           docker version
-          # 登录阿里云镜像仓库
-          echo $DOCKER_PASSWORD | docker login --username=$DOCKER_USERNAME --password-stdin registry.cn-hangzhou.aliyuncs.com
           # 使用Dockerfile构建镜像
           docker build . --file Dockerfile --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
           # 推送镜像到镜像仓库
           docker push registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
-      -  name: Push to GitHub Packages
-         run: |
-           docker version
-            # 登录 GitHub Packages
-           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io --username=${{ github.actor }} --password-stdin
-           
-           # 构建 Docker 镜像
-           docker build . --file Dockerfile --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
-           
-           # 推送镜像到 GitHub Packages
-           docker push ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image to GitHub Packages
+        run: |
+          docker version
+          # 构建 Docker 镜像
+          docker build . --file Dockerfile --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
+          # 推送镜像到 GitHub Packages
+          docker push ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
