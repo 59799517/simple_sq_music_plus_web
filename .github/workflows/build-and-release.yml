@@ -2,8 +2,7 @@ name: Build and Release
 
 on:
   push:
-    branches: [ v3,v2]
-
+    branches: [ v3,v2 ] # 只在提交到2.0分支时触发
 env:
   APP_NAME: simple_sq_music_plus_web
   DOCKER_IMAGE_NAME: simple_sq_music_plus_web
@@ -61,26 +60,23 @@ jobs:
           asset_name: ${{ env.APP_NAME }}.zip
           asset_content_type: application/zip
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Build the Docker image
         run: |
           docker version
           # 登录阿里云镜像仓库
           docker login --username=$DOCKER_USERNAME --password=$DOCKER_PASSWORD registry.cn-hangzhou.aliyuncs.com
           # 使用Dockerfile构建镜像
-          docker build . --file Dockerfile --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:v$APP_VERSION
+          docker build . --file Dockerfile --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
           # 推送镜像到镜像仓库
-          docker push registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:v$APP_VERSION
-      - name: Push to GitHub Packages
-        run: |
-          docker version
-           # 登录 GitHub Packages
-          docker login ghcr.io --username=${{ github.actor }} --password=${{ secrets.GITHUB_TOKEN }}
-          
-          # 构建 Docker 镜像
-          docker build . --file Dockerfile --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:v$APP_VERSION
-          
-          # 推送镜像到 GitHub Packages
-          docker push ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:v$APP_VERSION
+          docker push registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
+      -  name: Push to GitHub Packages
+         run: |
+           docker version
+            # 登录 GitHub Packages
+           docker login ghcr.io --username=${{ github.actor }} --password=${{ secrets.GITHUB_TOKEN }}
+           
+           # 构建 Docker 镜像
+           docker build . --file Dockerfile --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
+           
+           # 推送镜像到 GitHub Packages
+           docker push ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
