@@ -5,11 +5,6 @@ import { useRoute, useRouter } from 'vue-router'
 import userInfoStore from "../stores/user"; //引入仓库
 import { storeToRefs } from "pinia";
 
-
-
-
-
-
 //1. 创建新的axios实例，
 const service = axios.create({
     // 公共接口--这里注意后面会讲
@@ -24,12 +19,30 @@ service.interceptors.request.use(config => {
     const stuserInfoStore = userInfoStore();
     const { username, token } = storeToRefs(stuserInfoStore); // 响应式
     console.log("token:"+token.value)
+    
+    // 添加时间戳参数以防止缓存
+    if (config.method === "get" || config.method === "GET") {
+        config.params = {
+            ...config.params,
+            _t: Date.now() // 添加时间戳参数防止GET请求被缓存
+        };
+    }
+    
     if (config.method=="post"||config.method=="POST"){
         // config.data = JSON.stringify(config.data); //数据转化,也可以使用qs转换
         config.headers = {
             'Content-Type':'application/json' //配置请求头
         }
     }
+    
+    // 添加禁止缓存的请求头
+    config.headers = {
+        ...config.headers,
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    };
+    
     //如有需要：注意使用token的时候需要引入cookie方法或者用本地localStorage等方法，推荐js-cookie
     if(token.value){
     config.headers.sqmusic= token.value; //如果要求携带在请求头中
