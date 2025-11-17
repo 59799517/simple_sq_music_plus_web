@@ -1,9 +1,10 @@
 <script setup>
 import TopWitge from "./V3TopWitge.vue";
 import PlayMusic from "./PlayMusic.vue";
+import PlayMusicMobile from "./PlayMusicMobile.vue"; // Added import for mobile player
 import { useRoute, useRouter } from 'vue-router'
 import { ref,watch ,nextTick, onMounted, onUnmounted } from 'vue';
-import {NButton, NSpace,NTag,NImage,NAvatar,NText} from "naive-ui";
+import {NButton, NSpace,NTag,NImage,NAvatar,NText, NModal} from "naive-ui"; // Added NModal import
 import usePlayListStore from "../stores/playList";
 import configInfoStore from "../stores/config";
 import {getAllOption} from "../utils/api.js";
@@ -23,6 +24,11 @@ const audioElement = ref(null)
 const showMusicDetail = ref(false)
 const isDraggable = ref(true)
 const listContainerRef = ref(null)
+
+// 检测是否为移动设备
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 // 添加键盘事件处理
 const handleKeyDown = (event) => {
@@ -54,6 +60,12 @@ let nowPlay = ref({
 })
 
 let nowplayList = ref([])
+
+// 移动端播放列表显示控制
+const showMobilePlaylist = ref(false)
+
+// 添加移动端播放器显示控制
+const showMobilePlayer = ref(false);
 
 // 组件挂载时滚动到当前播放的歌曲
 onMounted(() => {
@@ -208,8 +220,13 @@ const playSong = (index) => {
 const handleItemClick = (index) => {
   // 如果点击的是当前正在播放的歌曲
   if (index === stplayListStore.playIndex) {
-    showSongDetail()
-    window.$message.info("正在播放点击成功");
+    // 在移动端显示模态框而不是跳转页面
+    if (isMobile()) {
+      showMobilePlayer.value = true;
+    } else {
+      showSongDetail();
+      window.$message.info("正在播放点击成功");
+    }
   } else {
     // 如果点击的是其他歌曲，则播放该歌曲
     playSong(index);
@@ -605,6 +622,21 @@ const handleMouseLeave = (event) => {
   event.currentTarget.style.transform = `translate(${motionPosition.value.x}px, ${motionPosition.value.y}px) scale(1)`;
 }
 
+// 移动端显示播放列表
+const toggleMobilePlaylist = () => {
+  showMobilePlaylist.value = !showMobilePlaylist.value;
+}
+
+// 移动端隐藏播放列表
+const hideMobilePlaylist = () => {
+  showMobilePlaylist.value = false;
+}
+
+// 添加关闭移动端播放器的方法
+const closeMobilePlayer = () => {
+  showMobilePlayer.value = false;
+};
+
 </script>
 <template>
 
@@ -613,50 +645,65 @@ const handleMouseLeave = (event) => {
     <router-view />
     <!-- 隐藏的音频元素 -->
     <audio
-      ref="audioElement"
-      :src="stplayListStore.musicUrl"
-      preload="auto"
-      @loadedmetadata="handleLoadedMetadata"
-      @timeupdate="handleTimeUpdate"
-      @play="handlePlay"
-      @pause="handlePause"
-      @ended="handleEnded"
-      @error="handleError"
+        ref="audioElement"
+        :src="stplayListStore.musicUrl"
+        preload="auto"
+        @loadedmetadata="handleLoadedMetadata"
+        @timeupdate="handleTimeUpdate"
+        @play="handlePlay"
+        @pause="handlePause"
+        @ended="handleEnded"
+        @error="handleError"
     ></audio>
 
 
     <!-- 歌曲详情弹窗 -->
     <PlayMusic
-      :song-info="nowPlay"
-      :visible="showMusicDetail"
-      @close="hideSongDetail"
-      @seek="seekTo"
+        :song-info="nowPlay"
+        :visible="showMusicDetail"
+        @close="hideSongDetail"
+        @seek="seekTo"
     />
-    <div    v-if="nowplayList.length > 0" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 999;">      <div
-          ref="motionElementRef"
-          style="width: 60px; height: 60px; cursor: grab; pointer-events: auto; position: fixed; top: 0; left: 0; transition: transform 0.3s ease;"
-          :style="{ transform: `translate(${motionPosition.x}px, ${motionPosition.y}px)` }"
-          @mousedown="handleDragStart"
-          @mouseenter="handleMouseEnter"
-          @mouseleave="handleMouseLeave"
+    <!-- 移动端播放器模态框 -->
+    <n-modal
+      v-model:show="showMobilePlayer"
+      :mask-closable="false"
+      preset="dialog"
+      :show-icon="false"
+      :closable="false"
+      style="width: 100vw; height: 100vh; background: transparent; box-shadow: none;"
+    >
+      <PlayMusicMobile @close="closeMobilePlayer" />
+    </n-modal>
+    
+    <!-- 桌面端浮动按钮 -->
+    <div v-if="!isMobile() && nowplayList.length > 0" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 999;">      
+      <div
+        ref="motionElementRef"
+        style="width: 60px; height: 60px; cursor: grab; pointer-events: auto; position: fixed; top: 0; left: 0; transition: transform 0.3s ease;"
+        :style="{ transform: `translate(${motionPosition.x}px, ${motionPosition.y}px)` }"
+        @mousedown="handleDragStart"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
       >
-      <div style="width: 100%; height: 100%; position: relative;">
-        <n-popover  placement="bottom"
-                    trigger="hover"
-                    :show-arrow="false"
-                    :disabled="!showPopover">
-          <template #trigger>
-            <n-avatar
-                size="large"
-                :round="true"
-                :src="nowPlay.pic||'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
-                :class="[
-            'rotating-avatar',
-            { 'paused': !stplayListStore.isPlaying }
-          ]"
-                @error="handleImageError"                  style="width: 100%; height: 100%;"
-            />
-          </template>
+        <div style="width: 100%; height: 100%; position: relative;">
+          <n-popover  placement="bottom"
+                      trigger="hover"
+                      :show-arrow="false"
+                      :disabled="!showPopover">
+            <template #trigger>
+              <n-avatar
+                  size="large"
+                  :round="true"
+                  :src="nowPlay.pic||'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
+                  :class="[
+              'rotating-avatar',
+              { 'paused': !stplayListStore.isPlaying }
+            ]"
+                  @error="handleImageError"                  
+                  style="width: 100%; height: 100%;"
+              />
+            </template>
             <n-card  size="small" style="width: 500px;cursor:default">
 
               <template #header>
@@ -676,8 +723,8 @@ const handleMouseLeave = (event) => {
               </template>
 
               <n-list ref="listContainerRef" class="list-container" hoverable clickable>
-                <n-list-item v-for="(item, index) in nowplayList" :key="item.id || index" @click="() => handleItemClick(index)">
-                  <n-thing>
+                <n-list-item v-for="(item, index) in nowplayList" :key="item.id || index" @click="() => handleItemClick(index)" style="display: flex; flex-direction: row; align-items: center;">
+                  <n-thing style="flex: 1; min-width: 0;">
 
                     <template #avatar>
                       <n-avatar
@@ -689,44 +736,30 @@ const handleMouseLeave = (event) => {
                       />
                     </template>
 
-                    <template #description>
-                      <n-ellipsis style="max-width: 140px">
-                        {{ Array.isArray(item.artistName) ? item.artistName.join(', ') : item.artistName || '未知歌手' }}
-                        <template #tooltip>
-                          <div style="text-align: center">
-                            {{ Array.isArray(item.artistName) ? item.artistName.join(', ') : item.artistName || '未知歌手' }}
-                          </div>
-                        </template>
-                      </n-ellipsis>
-                    </template>
-
                     <template #header>
-                      <n-ellipsis style="max-width: 140px">
+                      <n-ellipsis style="max-width: 200px;" :tooltip="true">
                         {{ item.name || '未知歌曲' }}
-                        <template #tooltip>
-                          <div style="text-align: center">
-                            {{ item.name || '未知歌曲' }}
-                          </div>
-                        </template>
                       </n-ellipsis>
                     </template>
 
-                    <template #header-extra>
-                      <n-ellipsis style="max-width: 140px">
-                        {{ item.albumName || '未知专辑' }}
-                        <template #tooltip>
-                          <div style="text-align: center">
-                            {{ item.albumName || '未知专辑' }}
-                          </div>
-                        </template>
-                      </n-ellipsis>
+                    <template #description>
+                      <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <!-- 专辑信息 -->
+                        <n-ellipsis style="max-width: 200px;" :tooltip="true">
+                          {{ item.albumName || '未知专辑' }}
+                        </n-ellipsis>
+                        <!-- 歌手信息 -->
+                        <n-ellipsis style="max-width: 200px;" :tooltip="true">
+                          {{ Array.isArray(item.artistName) ? item.artistName.join(', ') : item.artistName || '未知歌手' }}
+                        </n-ellipsis>
+                      </div>
                     </template>
                   </n-thing>
-
+                  
                   <template #suffix>
-                    <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer;">播放</n-tag>
-                    <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer;" type="warning">暂停</n-tag>
-                    <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer;" type="success">播放</n-tag>
+                    <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
+                    <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="warning">暂停</n-tag>
+                    <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="success">播放</n-tag>
                   </template>
                 </n-list-item>
               </n-list>
@@ -734,16 +767,86 @@ const handleMouseLeave = (event) => {
           </n-popover>
 
           <!-- 添加实时位置信息显示（使用绝对坐标） -->
-<!--          <div-->
-<!--            v-show="isDragging"-->
-<!--            style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%);-->
-<!--                   background: rgba(0, 0, 0, 0.7); color: white; padding: 4px 8px; border-radius: 4px;-->
-<!--                   font-size: 12px; white-space: nowrap;">-->
-<!--            Pos: {{ Math.round(motionLivePosition.x) }}, {{ Math.round(motionLivePosition.y) }}-->
-<!--          </div>-->
+          <!--          <div-->
+          <!--            v-show="isDragging"-->
+          <!--            style="position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%);-->
+          <!--                   background: rgba(0, 0, 0, 0.7); color: white; padding: 4px 8px; border-radius: 4px;-->
+          <!--                   font-size: 12px; white-space: nowrap;">-->
+          <!--            Pos: {{ Math.round(motionLivePosition.x) }}, {{ Math.round(motionLivePosition.y) }}-->
+          <!--          </div>-->
         </div>
       </div>
     </div>
+    
+    <!-- 移动端浮动按钮和播放列表 -->
+    <div v-if="isMobile() && nowplayList.length > 0" style="position: fixed; bottom: 100px; right: 20px; z-index: 999;">
+      <!-- 移动端浮动按钮 -->
+      <n-avatar
+        size="large"
+        :round="true"
+        :src="nowPlay.pic||'https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png'"
+        :class="[
+          'rotating-avatar',
+          { 'paused': !stplayListStore.isPlaying }
+        ]"
+        @error="handleImageError"
+        style="width: 60px; height: 60px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3);"
+        @click="toggleMobilePlaylist"
+      />
+    </div>
+    
+    <!-- 移动端播放列表抽屉 -->
+    <n-drawer v-model:show="showMobilePlaylist" :height="'80%'" placement="bottom" :trap-focus="false" :block-scroll="false">
+      <n-drawer-content title="播放列表" closable>
+        <template #header>
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <n-h2 style="margin: 0;">播放列表</n-h2>
+            <n-button @click="clearPlayList" size="small">清空播放列表</n-button>
+          </div>
+        </template>
+        
+        <n-list ref="listContainerRef" hoverable clickable style="padding-bottom: 20px;">
+          <n-list-item v-for="(item, index) in nowplayList" :key="item.id || index" @click="() => handleItemClick(index)" style="display: flex; flex-direction: row; align-items: center;">
+            <n-thing style="flex: 1; min-width: 0;">
+              <template #avatar>
+                <n-avatar
+                    size="large"
+                    :round="true"
+                    :src="item.pic || ''"
+                    :class="{ 'rotating-avatar': index === stplayListStore.playIndex && stplayListStore.isPlaying }"
+                    @error="handleImageError"
+                />
+              </template>
+
+              <template #header>
+                <n-ellipsis style="max-width: 200px;" :tooltip="true">
+                  {{ item.name || '未知歌曲' }}
+                </n-ellipsis>
+              </template>
+
+              <template #description>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <!-- 专辑信息 -->
+                  <n-ellipsis style="max-width: 200px;" :tooltip="true">
+                    {{ item.albumName || '未知专辑' }}
+                  </n-ellipsis>
+                  <!-- 歌手信息 -->
+                  <n-ellipsis style="max-width: 200px;" :tooltip="true">
+                    {{ Array.isArray(item.artistName) ? item.artistName.join(', ') : item.artistName || '未知歌手' }}
+                  </n-ellipsis>
+                </div>
+              </template>
+            </n-thing>
+
+            <template #suffix>
+              <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
+              <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer;" type="warning">暂停</n-tag>
+              <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer;" type="success">播放</n-tag>
+            </template>
+          </n-list-item>
+        </n-list>
+      </n-drawer-content>
+    </n-drawer>
   </n-flex>
 
 
@@ -787,24 +890,31 @@ const handleMouseLeave = (event) => {
   max-height: 300px;
   overflow-y: auto;
 }
-</style>
-<style>
-/* 添加旋转动画 */
-.rotating-avatar {
-  animation: rotate 5s linear infinite;
-  animation-play-state: running;
+
+/* 播放列表项的样式 */
+.n-list-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
-.rotating-avatar.paused {
-  animation-play-state: paused;
+.n-list-item .n-thing {
+  flex: 1;
+  min-width: 0; /* 允许内容收缩到0宽度，以启用省略号 */
 }
 
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.n-list-item .n-thing .n-thing-main__header,
+.n-list-item .n-thing .n-thing-main__description,
+.n-list-item .n-thing .n-thing-main__header-extra {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+/* 确保后缀按钮不会被挤压 */
+.n-list-item .n-list-item__suffix {
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 </style>

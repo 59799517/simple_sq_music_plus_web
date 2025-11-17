@@ -2,20 +2,26 @@
 import { defineStore } from 'pinia'
 import Set from "./V3Set.vue";
 
-
 import configInfoStore from "../stores/config";
 const stconfigInfoStore =configInfoStore()
 
+// 检测是否为移动设备
+const isMobile = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 // 设置参数
 const active = ref(false);
 const placement = ref("right");
 const activate = (place) => {
+  // 移动端从底部弹出，桌面端从右侧弹出
+  if (isMobile()) {
+    placement.value = 'bottom';
+  } else {
+    placement.value = place;
+  }
   active.value = true;
-  placement.value = place;
 };
-
-
 
 </script>
 
@@ -40,44 +46,77 @@ const activate = (place) => {
         </n-popover>
 
       </div>
-      <div class="box">
-        <!-- 修改路径，添加 /home 前缀 -->
-        <router-link active-class="active" to="/v3search">
-          <n-button size="large" quaternary>
-            搜索
-          </n-button>
-        </router-link>
-        <router-link active-class="active" to="/V3Download">
-          <n-button size="large" quaternary>
-            下载
-          </n-button>
-        </router-link>
-        <router-link active-class="active" to="/V3Parsertext">
-          <n-button size="large" quaternary>
-            解析文本
-          </n-button>
-        </router-link>
-        <router-link active-class="active" to="/V3ParserPlaylist">
-          <n-button size="large" quaternary>
-            解析歌单
-          </n-button>
-        </router-link>
-      </div>
-      <div class="box">
-<!--        <router-link active-class="active" to="/V3Set">-->
-          <n-button  size="large" quaternary @click="activate('right')">
+      
+      <!-- PC端布局 -->
+      <template v-if="!isMobile()">
+        <div class="box">
+          <!-- 修改路径，添加 /home 前缀 -->
+          <router-link active-class="active" to="/v3search">
+            <n-button size="large" quaternary>
+              搜索
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3Download">
+            <n-button size="large" quaternary>
+              下载
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3Parsertext">
+            <n-button size="large" quaternary>
+              解析文本
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3ParserPlaylist">
+            <n-button size="large" quaternary>
+              解析歌单
+            </n-button>
+          </router-link>
+        </div>
+        <div class="box">
+  <!--        <router-link active-class="active" to="/V3Set">-->
+            <n-button  size="large" quaternary @click="activate('right')">
+              设置
+            </n-button>
+  <!--        </router-link>-->
+  <!--        <n-button @click="clockTheam" quaternary>-->
+  <!--          切换主题-->
+  <!--        </n-button>-->
+  <!--        <n-button @click="logout_b">设置</n-button>-->
+        </div>
+      </template>
+      
+      <!-- 移动端布局 -->
+      <template v-else>
+        <div class="box mobile-nav">
+          <router-link active-class="active" to="/v3search">
+            <n-button size="large" quaternary>
+              搜索
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3Download">
+            <n-button size="large" quaternary>
+              下载
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3Parsertext">
+            <n-button size="large" quaternary>
+              解析文本
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/V3ParserPlaylist">
+            <n-button size="large" quaternary>
+              解析歌单
+            </n-button>
+          </router-link>
+          <n-button size="large" quaternary @click="activate('right')">
             设置
           </n-button>
-<!--        </router-link>-->
-<!--        <n-button @click="clockTheam" quaternary>-->
-<!--          切换主题-->
-<!--        </n-button>-->
-<!--        <n-button @click="logout_b">设置</n-button>-->
-      </div>
+        </div>
+      </template>
     </div>
   </div>
 <!--设置弹出框-->
-  <n-drawer v-model:show="active" :width="502" :placement="placement">
+  <n-drawer v-model:show="active" :width="isMobile() ? '100%' : 502" :height="isMobile() ? '80%' : '100%'" :placement="placement">
     <n-drawer-content title="设置">
     <Set></Set>
     </n-drawer-content>
@@ -102,6 +141,27 @@ const activate = (place) => {
   align-content: center;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* 移动端导航样式 */
+.mobile-nav {
+  width: 100%;
+  justify-content: space-around;
+  margin-top: 10px;
+}
+
+.mobile-nav a,
+.mobile-nav button {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.mobile-nav a .n-button,
+.mobile-nav button {
+  width: 100%;
+  font-size: 14px;
+  padding: 0 5px;
 }
 
 img{

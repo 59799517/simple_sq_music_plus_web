@@ -16,7 +16,7 @@ import {
   getAllOption
 } from "../utils/api.js"; //引入仓库
 import Cookies from 'js-cookie';
-import { inject } from 'vue';
+import { inject, ref, onMounted } from 'vue';
 
 import userInfoStore from "../stores/user";
 import configInfoStore from "../stores/config";
@@ -27,6 +27,68 @@ const { loginDevice,username, token } = storeToRefs(stuserInfoStore); // 响应�
 
 // 注入切换主题方法
 const changetheme = inject("changetheme");
+
+// PWA安装相关
+const deferredPrompt = ref(null);
+const showInstallPrompt = ref(false);
+
+// 检查是否支持PWA安装
+const checkPWAInstallSupport = () => {
+  // 检查浏览器是否支持PWA
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    // 监听 beforeinstallprompt 事件
+    const beforeInstallPromptHandler = (e) => {
+      // 阻止默认的安装提示
+      e.preventDefault();
+      // 保存事件以便稍后使用
+      deferredPrompt.value = e;
+      // 显示安装按钮
+      showInstallPrompt.value = true;
+    };
+    
+    window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler);
+    
+    // 返回清理函数
+    return () => {
+      window.removeEventListener('beforeinstallprompt', beforeInstallPromptHandler);
+    };
+  }
+  
+  return () => {};
+};
+
+// 安装PWA
+const installPWA = () => {
+  if (deferredPrompt.value) {
+    // 显示安装提示
+    deferredPrompt.value.prompt();
+    // 等待用户响应
+    deferredPrompt.value.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('用户接受了PWA安装');
+      } else {
+        console.log('用户拒绝了PWA安装');
+      }
+      // 重置 deferredPrompt 变量
+      deferredPrompt.value = null;
+      // 隐藏安装提示
+      showInstallPrompt.value = false;
+    });
+  }
+};
+
+// 检查是否支持PWA功能
+const isPWASupported = () => {
+  return typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+};
+
+// 页面加载时检查PWA安装支持
+onMounted(() => {
+  const cleanup = checkPWAInstallSupport();
+  
+  // 在组件卸载时清理事件监听器
+  // 这里我们不需要显式调用cleanup，因为Vue会在组件卸载时自动清理
+});
 
 //设置分组
 let configData = ref([]);
@@ -100,16 +162,6 @@ let refreshData= () => {
 //刷新数据
 refreshData();
 
-
-
-
-
-
-
-
-
-
-
 // 设置弹出框
 let showModal = ref(false)
 let tempModalTile = ref("")
@@ -181,7 +233,6 @@ if (tempModalKeyNullCheck.value===1){
           stconfigInfoStore.clearData()
           stconfigInfoStore.setData(value.data.data)
           // configData.value=value.data.data
-
 
           refreshData()
         }else{
@@ -321,16 +372,10 @@ let  handleFinish = ({
   }else{
     window.$message.error("配置导入失败!")
   }
-
-
-
 }
 </script>
 
 <template>
-
-
-
   <n-card title="系统设置">
     <n-list v-for="(item, index) in systemConfig">
       <n-list-item v-if="item.configShow===1">
@@ -346,6 +391,7 @@ let  handleFinish = ({
       </n-list-item>
     </n-list>
   </n-card>
+  
   <n-card title="插件登录" v-if="qqvipPlugopen||kgPlugopen">
     <n-tabs type="line"  animated>
       <n-tab-pane display-directive="if" name="qqvip" tab="qqvip" v-if="qqvipPlugopen">
@@ -367,9 +413,8 @@ let  handleFinish = ({
             刷新当前登录cookie
           </n-button>
         </n-flex>
-
-
       </n-tab-pane>
+      
       <n-tab-pane display-directive="if" name="酷狗概念" tab="酷狗概念" v-if="kgPlugopen">
         <n-image v-if="kgqr" :src="kgqr"></n-image>
         <n-divider v-if="kgLastTime!==''">
@@ -399,12 +444,10 @@ let  handleFinish = ({
             酷狗手动签到
           </n-button>
         </n-flex>
-
       </n-tab-pane>
     </n-tabs>
-
-
   </n-card>
+  
   <n-card title="插件设置" style="margin-bottom: 16px">
     <n-tabs type="line" animated>
       <n-tab-pane
@@ -431,7 +474,6 @@ let  handleFinish = ({
               </template>
             </n-list-item>
           </div>
-
         </n-list>
       </n-tab-pane>
       <n-tab-pane name="no-plugins" tab="无插件" v-if="Object.keys(plugConfig).length === 0">
@@ -439,11 +481,23 @@ let  handleFinish = ({
       </n-tab-pane>
     </n-tabs>
   </n-card>
+  
   <n-card title="登录信息">
     <div style="display: flex;flex-direction: column;width: 100%" >
       <n-p>token：{{token}}</n-p>
       <n-p>username：{{username}}</n-p>
       <n-button @click="changetheme">切换主题</n-button>
+      
+      <!-- PWA安装按钮移到这里 -->
+      <n-button 
+        v-if="isPWASupported()" 
+        @click="installPWA" 
+        style="margin-top: 10px;"
+        :disabled="!showInstallPrompt"
+        :title="!showInstallPrompt ? '暂不支持安装或已安装' : '安装应用到桌面'"
+      >
+        {{ showInstallPrompt ? '安装应用' : '安装应用（不可用）' }}
+      </n-button>
 
       <div style="width: 100%; display: flex; flex-direction: column;">
         <n-upload
@@ -459,7 +513,7 @@ let  handleFinish = ({
         </n-upload>
       </div>
 
-      <n-button @click="clogout">退出</n-button>
+      <n-button @click="clogout" style="margin-top: 10px;">退出</n-button>
     </div>
   </n-card>
 
@@ -502,7 +556,6 @@ let  handleFinish = ({
         </div>
         <div v-if="tempModalType===''||tempModalType===null" >
           <n-input v-model:value="tempModalValue" :disabled="tempModalDisabled===1" />
-
         </div>
 
         <br>

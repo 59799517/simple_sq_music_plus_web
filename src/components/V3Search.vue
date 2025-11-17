@@ -1,5 +1,5 @@
 <script setup lang="js">
-import {ref, nextTick, h,defineComponent,inject,watch ,watchEffect  } from 'vue'
+import {ref, nextTick, h,defineComponent,inject,watch ,watchEffect, computed, onMounted, onBeforeUnmount } from 'vue'
 import configInfoStore from "../stores/config";
 import playListStore from "../stores/playList";
 import {
@@ -11,7 +11,7 @@ import {
   musicDownloadAlbum,
   musicDownloadArtist
 } from "../utils/api.js";
-import {NButton, NSpace,NTag,NImage} from "naive-ui";
+import {NButton, NSpace,NTag,NImage, NGrid, NGridItem, NCard, NAvatar} from "naive-ui";
 import {storeToRefs} from "pinia";
 import ArtistInfo from "./ArtistInfo.vue";
 import AlbumInfo from "./AlbumInfo.vue";
@@ -20,9 +20,34 @@ import AlbumInfo from "./AlbumInfo.vue";
 const stconfigInfoStore =configInfoStore()
 const stplayListStore  = playListStore()
 
+// 检测是否为移动设备
+const isMobile = computed(() => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+})
 
+// 回到顶部按钮显示控制
+let showBackTop = ref(false)
 
+// 监听滚动事件
+let handleScroll = () => {
+  showBackTop.value = window.scrollY > 300
+}
 
+// 回到顶部方法
+let backToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 
 // 搜索关键字
 let keyword_value = ref("")
@@ -229,6 +254,9 @@ let TableColumns = [
         fallbackSrc:"https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
         onError: () => {
           window.$message.error("图片加载失败")
+        },
+        style: {
+          borderRadius: '4px'
         }
       });
     }
@@ -351,7 +379,8 @@ let TableColumns = [
             NButton,
             {
               style: {
-                 marginRight: '6px'
+                 marginRight: '6px',
+                 marginTop: '4px'
               },
               ghost: true,
               type: 'warning',
@@ -371,7 +400,27 @@ let TableColumns = [
             }
         )
       })
-      return tags
+      return h('div', {
+        style: {
+          display: 'flex',
+          flexWrap: 'wrap'
+        }
+      }, [
+        h('span', {
+          style: {
+            display: 'inline-block',
+            minWidth: '40px',
+            marginRight: '6px'
+          }
+        }, '码率: '),
+        h('div', {
+          style: {
+            display: 'inline-flex',
+            flexWrap: 'wrap',
+            maxWidth: 'calc(100% - 50px)'
+          }
+        }, tags)
+      ])
     }
   },
 ]
@@ -397,6 +446,9 @@ let album_TableColumns = [
         fallbackSrc:"https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
         onError: () => {
           window.$message.error("图片加载失败")
+        },
+        style: {
+          borderRadius: '4px'
         }
       });
     },
@@ -581,6 +633,9 @@ let artist_TableColumns = [
         fallbackSrc:"https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
         onError: () => {
           window.$message.error("图片加载失败")
+        },
+        style: {
+          borderRadius: '50%'
         }
       });
     },
@@ -743,6 +798,337 @@ let update_select_type=(value, option)=>{
   pageIndex.value=1
   list_data.value=[]
 }
+
+// 渲染单曲卡片
+const renderMusicCard = (item) => {
+  return h(NCard, {
+    style: {
+      marginBottom: '16px'
+    }
+  }, {
+    default: () => [
+      // 第一行：图片
+      h('div', { 
+        style: { 
+          display: 'flex',
+          justifyContent: 'center',
+          marginBottom: '12px'
+        } 
+      }, [
+        h(NImage, {
+          src: item.pic,
+          fallbackSrc: "https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
+          style: {
+            width: '100%',
+            height: '150px',
+            borderRadius: '8px',
+            objectFit: 'cover'
+          }
+        })
+      ]),
+      
+      // 第二行：歌曲名称
+      h('div', { 
+        style: { 
+          fontWeight: 'bold', 
+          fontSize: '16px',
+          marginBottom: '8px',
+          textAlign: 'left'
+        } 
+      }, item.name),
+      
+      // 第三行：歌手（可以点击）
+      h('div', { 
+        style: { 
+          marginBottom: '8px'
+        } 
+      }, [
+        h('span', { 
+          style: { 
+            color: '#666', 
+            fontSize: '14px',
+            marginRight: '6px'
+          } 
+        }, '歌手: '),
+        ...item.artistName.map((artist, index) => 
+          h(NTag, {
+            style: {
+              marginRight: '6px',
+              marginTop: '4px',
+              cursor: 'pointer'
+            },
+            type: 'info',
+            bordered: false,
+            onClick: () => {
+              artist_info_data.value = { "id": item.artistids[index], "plugName": item.plugName }
+              show_artist_modal.value = true
+            }
+          }, { default: () => artist })
+        )
+      ]),
+      
+      // 第四行：专辑信息（可以点击）
+      h('div', { 
+        style: { 
+          marginBottom: '8px'
+        } 
+      }, [
+        h('span', { 
+          style: { 
+            color: '#666', 
+            fontSize: '14px',
+            marginRight: '6px'
+          } 
+        }, '专辑: '),
+        h(NTag, {
+          type: 'error',
+          bordered: false,
+          strong: true,
+          style: {
+            cursor: 'pointer',
+            marginTop: '4px'
+          },
+          onClick: () => {
+            album_info_data.value = { "id": item.albumid, "plugName": item.plugName }
+            show_album_modal.value = true
+          }
+        }, { default: () => item.albumName })
+      ]),
+      
+      // 第五行：时长信息
+      h('div', { 
+        style: { 
+          marginBottom: '8px'
+        } 
+      }, [
+        h('span', { 
+          style: { 
+            color: '#666', 
+            fontSize: '14px',
+            marginRight: '6px'
+          } 
+        }, '时长: '),
+        h(NTag, {
+          type: 'success',
+          bordered: false,
+          strong: true,
+          style: {
+            marginTop: '4px'
+          }
+        }, { default: () => formateTime(item.duration) })
+      ]),
+      
+      // 第六行：码率
+      h('div', { 
+        style: { 
+          marginBottom: '12px'
+        } 
+      }, [
+        h('div', {
+          style: {
+            display: 'flex',
+            alignItems: 'flex-start'
+          }
+        }, [
+          h('span', { 
+            style: { 
+              color: '#666', 
+              fontSize: '14px', 
+              marginRight: '6px',
+              flexShrink: 0
+            } 
+          }, '码率: '),
+          h('div', {
+            style: {
+              display: 'flex',
+              flexWrap: 'wrap',
+              flex: 1
+            }
+          }, [
+            ...item.brTypes.map(tagKey => 
+              h(NButton, {
+                style: {
+                  marginRight: '6px',
+                  marginTop: '4px'
+                },
+                size: 'small',
+                ghost: true,
+                type: 'warning',
+                onClick: () => {
+                  musicDownload(item, tagKey).then(value => {
+                    if (value.data.code === 200) {
+                      window.$message.success("开始下载")
+                    } else {
+                      window.$message.error("操作失败：" + value.data.msg)
+                    }
+                  })
+                }
+              }, { default: () => tagKey })
+            )
+          ])
+        ])
+      ]),
+      
+      // 第七行：播放按钮
+      showbutton.value ? 
+        h('div', {
+          style: {
+            display: 'flex',
+            justifyContent: 'flex-start'
+          }
+        }, [
+          h(NButton, {
+            style: {
+              marginRight: '6px'
+            },
+            ghost: true,
+            type: 'success',
+            onClick: () => {
+              stplayListStore.pushPlayListAndPlay(item)
+            }
+          }, { default: () => '播放' })
+        ]) : 
+        null
+    ]
+  })
+}
+
+// 渲染专辑卡片
+const renderAlbumCard = (item) => {
+  return h(NCard, {
+    style: {
+      marginBottom: '16px'
+    }
+  }, {
+    cover: () => h(NImage, {
+      src: item.pic,
+      lazy: true,
+      height: 150,
+      width: '100%',
+      fallbackSrc: "https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
+      onError: () => {
+        window.$message.error("图片加载失败")
+      },
+      style: {
+        objectFit: 'cover',
+        borderRadius: '8px'
+      }
+    }),
+    default: () => [
+      h('div', { style: { fontWeight: 'bold', fontSize: '16px', marginBottom: '8px' } }, item.albumName),
+      h('div', { style: { marginBottom: '8px' } }, [
+        h('span', { style: { color: '#666', fontSize: '14px' } }, '歌手: '),
+        h(NTag, {
+          style: {
+            marginRight: '6px',
+            marginTop: '4px',
+            cursor: 'pointer'
+          },
+          type: 'info',
+          bordered: false,
+          onClick: () => {
+            artist_info_data.value = { "id": item.artistid, "plugName": item.plugName }
+            show_artist_modal.value = true
+          }
+        }, { default: () => item.artistName })
+      ]),
+      h(NSpace, { style: { marginTop: '12px' } }, () => [
+        h(NButton, {
+          style: {
+            marginRight: '6px'
+          },
+          ghost: true,
+          type: 'primary',
+          onClick: () => {
+            playAlbum(item)
+          }
+        }, { default: () => '播放专辑' }),
+        h(NButton, {
+          style: {
+            marginRight: '6px'
+          },
+          ghost: true,
+          type: 'success',
+          onClick: () => {
+            musicDownloadAlbum(item).then(value => {
+              if (value.data.code === 200) {
+                window.$message.success("开始下载当前专辑：自动适配最高音质下载")
+              } else {
+                window.$message.error("操作失败：" + value.data.msg)
+              }
+            })
+          }
+        }, { default: () => '下载专辑' })
+      ])
+    ]
+  })
+}
+
+// 渲染歌手卡片
+const renderArtistCard = (item) => {
+  return h(NCard, {
+    style: {
+      marginBottom: '16px'
+    }
+  }, {
+    cover: () => h(NAvatar, {
+      src: item.pic,
+      lazy: true,
+      round: false,
+      height: 150,
+      width: '100%',
+      fallbackSrc: "https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png",
+      onError: () => {
+        window.$message.error("图片加载失败")
+      },
+      style: {
+        objectFit: 'cover',
+        borderRadius: '8px'
+      }
+    }),
+    default: () => [
+      h('div', { style: { fontWeight: 'bold', fontSize: '16px', marginBottom: '8px' } }, item.artistName),
+      h('div', { style: { marginBottom: '8px' } }, [
+        h('span', { style: { color: '#666', fontSize: '14px' } }, '专辑数: '),
+        h(NTag, {
+          type: 'info',
+          bordered: false,
+          strong: true,
+          style: {
+            marginTop: '4px'
+          }
+        }, { default: () => item.total })
+      ]),
+      h(NButton, {
+        style: {
+          marginTop: '12px'
+        },
+        ghost: true,
+        type: 'success',
+        onClick: () => {
+          musicDownloadArtist(item).then(value => {
+            if (value.data.code === 200) {
+              window.$message.success("开始下载当前歌手：自动适配最高音质下载")
+            } else {
+              window.$message.error("操作失败：" + value.data.msg)
+            }
+          })
+        }
+      }, { default: () => '下载全部专辑' })
+    ]
+  })
+}
+
+// 根据搜索类型渲染对应的卡片
+const renderCard = (item) => {
+  if (shear_select_value.value === 'album') {
+    return renderAlbumCard(item)
+  } else if (shear_select_value.value === 'artist') {
+    return renderArtistCard(item)
+  } else {
+    return renderMusicCard(item)
+  }
+}
 </script>
 
 <template>
@@ -791,7 +1177,9 @@ let update_select_type=(value, option)=>{
 <!--      <n-divider />-->
       <!--表格数据行-->
       <div class="sqRow" >
+        <!-- 桌面端显示表格 -->
         <n-data-table
+            v-if="!isMobile"
             :flex-height="false"
             :key="(row) => row.id"
             :bordered="false"
@@ -801,10 +1189,15 @@ let update_select_type=(value, option)=>{
             remote
             :on-update:page="handlePageChange"
         />
-
-
-
-
+        
+        <!-- 移动端显示卡片 -->
+        <div v-else>
+          <n-grid :cols="1" responsive="screen">
+            <n-grid-item v-for="item in list_data" :key="item.id">
+              <component :is="renderCard(item)" />
+            </n-grid-item>
+          </n-grid>
+        </div>
       </div>
       <n-flex justify="center">
         <n-card title="">
@@ -842,9 +1235,21 @@ let update_select_type=(value, option)=>{
 
     </n-spin>
 
-
-
-
+    <!-- 回到顶部按钮 -->
+    <transition name="fade">
+      <div v-if="showBackTop" class="back-top" @click="backToTop">
+        <n-button circle type="primary" size="large">
+          <template #icon>
+            <n-icon>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4l-8 8h6v8h4v-8h6l-8-8z"/>
+              </svg>
+            </n-icon>
+          </template>
+        </n-button>
+      </div>
+    </transition>
+  
   <!-- 歌手信息弹窗 -->
   <n-modal v-model:show="show_artist_modal" preset="card" style="width: 90%; height: 90%;" :title="artist_info_data.musicArtistsName">
     <ArtistInfo
@@ -891,5 +1296,74 @@ let update_select_type=(value, option)=>{
 :deep(.n-data-table__pagination) {
   display: flex !important;
   justify-content: center !important;
+}
+
+/* 移动端适配样式 */
+@media (max-width: 768px) {
+  .sqRow {
+    flex-direction: column;
+    width: 100% !important;
+  }
+  
+  .sqRow > div {
+    width: 100% !important;
+    margin-bottom: 10px;
+  }
+  
+  .n-pagination {
+    flex-wrap: wrap;
+  }
+  
+  /* 优化移动端卡片样式 */
+  :deep(.n-card) {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  /* 优化移动端图片展示 */
+  :deep(.n-image img) {
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+  }
+  
+  :deep(.n-image img:hover) {
+    transform: scale(1.02);
+  }
+  
+  /* 优化移动端标签显示 */
+  :deep(.n-tag) {
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+  
+  /* 优化按钮在小屏幕上的显示 */
+  :deep(.n-button) {
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+  
+  /* 确保码率按钮不会超出容器 */
+  :deep(.n-button) {
+    white-space: nowrap;
+  }
+}
+
+/* 回到顶部按钮样式 */
+.back-top {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  z-index: 999;
+}
+
+/* 淡入淡出动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
