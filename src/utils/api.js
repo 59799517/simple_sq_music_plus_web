@@ -474,6 +474,16 @@ export function getKgWxQrCodeStatus() {
 }
 
 /**
+ * 获取QQVIP微信二维码
+ * @returns {*}
+ */
+export function getQQVipWechatQrCode() {
+    return request({
+        url: baseUrl + plugUrl+"/qqvip/getWechatQrImage",
+        method: "get"
+    });
+}
+/**
  * 获取QQVIP QQ登录二维码
  */
 export function getQQVipQrCode() {

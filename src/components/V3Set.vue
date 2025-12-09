@@ -13,7 +13,8 @@ import {
   kgSign,
   getQQVipQrCodeStatus,
   getUploadJsonFileUrl,
-  getAllOption
+  getAllOption,
+  getQQVipWechatQrCode
 } from "../utils/api.js"; //引入仓库
 import Cookies from 'js-cookie';
 import { inject, ref, onMounted } from 'vue';
@@ -95,6 +96,9 @@ let configData = ref([]);
 let systemConfig = ref([]);
 let plugConfig = ref({});
 // 插件二维码设置
+
+let qrTitle = ref("注意区分手机QQ登录二维码和微信登录二维码");
+
 let qqvipPlugopen=ref(false)
 let kgPlugopen=ref(false)
 
@@ -263,10 +267,20 @@ let clogout=() => {
     }
   })
 }
+
+let getqqvipWechatQr=()=>{
+  getQQVipWechatQrCode().then((value)=>{
+    qqqr.value = value.data.data
+    qrTitle.value = "↓↓↓↓↓↓↓↓↓↓使用微信扫码（成功后等待5-10秒点击下方检测二维码状态）↓↓↓↓↓↓↓↓↓↓↓↓"
+    refreshData()
+  })
+}
+
 // 获取QQVIP登录二维码
 let getqqvipqqQr=()=>{
   getQQVipQrCode().then((value)=>{
     qqqr.value = value.data.data
+    qrTitle.value = "↓↓↓↓↓↓↓↓↓↓使用手机QQ扫码（成功后等待5-10秒点击下方检测二维码状态）↓↓↓↓↓↓↓↓↓↓↓↓"
     refreshData()
   })
 }
@@ -279,8 +293,10 @@ let getQQVipQrCodeStatusc=()=>{
     if (value.data.code===200){
       window.$message.success("扫码成功（已获取到用户信息）")
       qqqr.value="";
+      qrTitle.value="扫码成功了去搜索看看！";
     }else{
       window.$message.error(value.data.msg)
+      qrTitle.value="扫码有点问题，重试一下或者检查下网络啥问题！";
     }
     refreshData()
   })
@@ -395,23 +411,34 @@ let  handleFinish = ({
   <n-card title="插件登录" v-if="qqvipPlugopen||kgPlugopen">
     <n-tabs type="line"  animated>
       <n-tab-pane display-directive="if" name="qqvip" tab="qqvip" v-if="qqvipPlugopen">
-        <p>仅支持手机QQ扫码登录</p>
-        <n-image v-if="qqqr" :src="qqqr"></n-image>
+        <n-flex justify="space-around" >
+          <p>{{qrTitle}}</p>
+          <n-image :alt="qrTitle"  width="200" v-if="qqqr" :src="qqqr"></n-image>
+        </n-flex>
         <n-divider>
         </n-divider>
-        <n-flex vertical justify="space-around" size="large">
-          <n-button @click="getqqvipqqQr">
-            ①获取QQ音乐二维码
-          </n-button>
-          <n-button @click="getQQVipQrCodeStatusc">
-           ② 检查二维码状态
-          </n-button>
-          <n-divider>
-            辅助功能
-          </n-divider>
-          <n-button @click="refreshQQvipCookiec">
-            刷新当前登录cookie
-          </n-button>
+        <n-flex vertical>
+          <n-flex  inline justify="space-around" size="large">
+            <n-button @click="getqqvipqqQr">
+              ①获手机QQ二维码
+            </n-button>
+            <n-button @click="getqqvipWechatQr">
+              ①微信二维码
+            </n-button>
+          </n-flex>
+          <n-flex vertical justify="space-around" size="large">
+
+          </n-flex>
+
+        <n-button @click="getQQVipQrCodeStatusc">
+          ② 检查二维码状态
+        </n-button>
+        <n-divider>
+          辅助功能
+        </n-divider>
+        <n-button @click="refreshQQvipCookiec">
+          刷新当前登录cookie
+        </n-button>
         </n-flex>
       </n-tab-pane>
       
@@ -571,10 +598,5 @@ let  handleFinish = ({
 </template>
 
 <style >
-.n-upload-trigger {
-  display: flex !important;
-  box-sizing: border-box !important;
-  opacity: 1 !important;
-  transition: opacity .3s var(--n-bezier) !important;
-}
+
 </style>
