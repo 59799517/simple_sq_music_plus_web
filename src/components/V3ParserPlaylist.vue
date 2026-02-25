@@ -30,7 +30,7 @@ let download = ()=>{
   <n-space vertical>
     <n-input
         v-model:value="value"
-        placeholder="请输入歌单url："
+        placeholder="请输入歌单url：qq链接必须扫码登陆后才能使用！"
     />
   </n-space>
   <n-divider>

@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'
           registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
@@ -46,25 +46,16 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
-          release_name: Release ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+          files: |
+            ${{ env.APP_NAME }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ env.APP_NAME }}.zip
-          asset_name: ${{ env.APP_NAME }}.zip
-          asset_content_type: application/zip
 
       - name: Login to Alibaba Cloud Registry
         uses: docker/login-action@v3
@@ -73,13 +64,45 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image to Alibaba Cloud
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push base Docker image to Alibaba Cloud
         run: |
           docker version
-          # 使用Dockerfile构建镜像
-          docker build . --file Dockerfile --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
-          # 推送镜像到镜像仓库
-          docker push registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
+          # 构建基础架构镜像（默认平台）
+          docker buildx build . \
+            --file Dockerfile \
+            --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }} \
+            --push
+          # 构建 latest 标签
+          docker buildx build . \
+            --file Dockerfile \
+            --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:latest \
+            --push
+
+      - name: Build and push AMD64 Docker image to Alibaba Cloud
+        run: |
+          docker version
+          # 构建 AMD64 架构镜像
+          docker buildx build . \
+            --platform linux/amd64 \
+            --file Dockerfile \
+            --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}-amd64 \
+            --push
+
+      - name: Build and push ARM64 Docker image to Alibaba Cloud
+        run: |
+          docker version
+          # 构建 ARM64 架构镜像
+          docker buildx build . \
+            --platform linux/arm64 \
+            --file Dockerfile \
+            --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}-arm64 \
+            --push
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -88,10 +111,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image to GitHub Packages
+      - name: Build and push base Docker image to GitHub Packages
         run: |
           docker version
-          # 构建 Docker 镜像
-          docker build . --file Dockerfile --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
-          # 推送镜像到 GitHub Packages
-          docker push ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}
+          # 构建基础架构镜像（默认平台）
+          docker buildx build . \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }} \
+            --push
+          # 构建 latest 标签
+          docker buildx build . \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:latest \
+            --push
+
+      - name: Build and push AMD64 Docker image to GitHub Packages
+        run: |
+          docker version
+          # 构建 AMD64 架构 Docker 镜像
+          docker buildx build . \
+            --platform linux/amd64 \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}-amd64 \
+            --push
+
+      - name: Build and push ARM64 Docker image to GitHub Packages
+        run: |
+          docker version
+          # 构建 ARM64 架构 Docker 镜像
+          docker buildx build . \
+            --platform linux/arm64 \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}-arm64 \
+            --push
