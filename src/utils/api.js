@@ -14,11 +14,6 @@ const plugUrl = "/api/plug"
 const monitorUrl = "/api/monitor"
 
 
-
-// const baseUrl = ''
-//
-// const baseUrl = '/sqmusic-api'
-
 /**
  * 登录
  * @param username 用户名
