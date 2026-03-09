@@ -1,7 +1,7 @@
 import request from "./request.js";
 import qs from "qs";
 
-// const baseUrl = 'http://127.0.0.1:8099'
+ // const baseUrl = 'http://127.0.0.1:8099'
 const baseUrl = ''
 
 
@@ -11,6 +11,7 @@ const downloadUrl = "/api/download"
 const taskUrl = "/api/task"
 const parserUrl = "/api/parser"
 const plugUrl = "/api/plug"
+const monitorUrl = "/api/monitor"
 
 
 
@@ -165,7 +166,6 @@ export function getAlbumInfo(id,plugName) {
  * @returns {*}
  */
 export function musicSearch(plugName,searType = "music",keyword,pageSize=20,pageIndex=1) {
-    // console.log(plugType,searType ,keyword,pageSize,pageIndex)
     if (searType === "music"){
         return request({
             url: baseUrl + musicUrl+"/searchSong",
@@ -519,3 +519,62 @@ export function getUploadJsonFileUrl() {
     return baseUrl + configUrl+"/importSongList"
 }
 
+/**
+ * 获取网速情况
+ */
+export function getNetSpeed() {
+    return request({
+        url: baseUrl + configUrl+"/getCurrentNetwork",
+        method: "get"
+    });
+}
+
+/**
+ * 获取监听列表
+ */
+export function getMonitor() {
+return request({
+    url: baseUrl + monitorUrl+"/list",
+    method: "get"
+})
+}
+
+/**
+ *新增监听
+ */
+export function addMonitor(data) {
+    return request({
+        url: baseUrl + monitorUrl+"/add",
+        method: "post",
+        data: data
+    })
+}
+
+/**
+ * 删除监听
+ */
+export function delListen(id) {
+    return request({
+        url: baseUrl + monitorUrl+"/delete",
+        method: "post",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data: {"id":id}
+    })
+}
+
+/**
+ * 获取歌单信息
+ */
+export function parserUrlInfo(url) {
+    return request({
+        url: baseUrl + parserUrl+"/parserUrlInfo",
+        method: "post",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data: {"url":url}
+    })
+
+}

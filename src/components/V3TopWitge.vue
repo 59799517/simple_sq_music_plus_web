@@ -1,10 +1,16 @@
 <script setup lang="js">
-import { defineStore } from 'pinia'
+import {ref } from 'vue'
+
 import Set from "./V3Set.vue";
+import {
+  getNetSpeed, getQQVipQrCodeStatus
+} from "../utils/api.js";
 
 import configInfoStore from "../stores/config";
 const stconfigInfoStore =configInfoStore()
 
+const uploadSpeed = ref("0.00 B/s");
+const downloadSpeed = ref("0.00 B/s");
 // 检测是否为移动设备
 const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -23,6 +29,20 @@ const activate = (place) => {
   active.value = true;
 };
 
+/**
+ * 每间隔 10 秒执行一次 获取当前网速
+ */
+setInterval(()=>{
+  getNetSpeed()
+  .then((value)=>{
+    uploadSpeed.value = value.data.data.uploadSpeedFormatted+"p"
+    downloadSpeed.value = value.data.data.downloadSpeedFormatted
+  })
+  .catch((error)=>{
+    // console.error('getNetSpeed 错误:', error)
+  })
+},1000)
+
 </script>
 
 <template>
@@ -31,7 +51,17 @@ const activate = (place) => {
       <div class="box"  >
         <n-popover trigger="hover">
           <template #trigger>
-            <h2>SqMusic</h2>
+            <div>
+              <n-flex justify= "center" align = "center">
+                <h2>SqMusic</h2>
+                <n-gradient-text :size="12" type="success" >
+                  上传：{{uploadSpeed}}
+                  下载：{{downloadSpeed}}
+                </n-gradient-text>
+              </n-flex>
+
+            </div>
+
           </template>
           <p>
             <n-gradient-text :size="12" type="success" >
@@ -71,17 +101,16 @@ const activate = (place) => {
               解析歌单
             </n-button>
           </router-link>
+          <router-link active-class="active" to="/Monitor">
+            <n-button size="large" quaternary>
+              监听下载
+            </n-button>
+          </router-link>
         </div>
         <div class="box">
-  <!--        <router-link active-class="active" to="/V3Set">-->
             <n-button  size="large" quaternary @click="activate('right')">
               设置
             </n-button>
-  <!--        </router-link>-->
-  <!--        <n-button @click="clockTheam" quaternary>-->
-  <!--          切换主题-->
-  <!--        </n-button>-->
-  <!--        <n-button @click="logout_b">设置</n-button>-->
         </div>
       </template>
       
@@ -106,6 +135,11 @@ const activate = (place) => {
           <router-link active-class="active" to="/V3ParserPlaylist">
             <n-button size="large" quaternary>
               解析歌单
+            </n-button>
+          </router-link>
+          <router-link active-class="active" to="/Monitor">
+            <n-button size="large" quaternary>
+              监听下载
             </n-button>
           </router-link>
           <n-button size="large" quaternary @click="activate('right')">

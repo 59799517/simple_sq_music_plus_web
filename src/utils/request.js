@@ -9,8 +9,7 @@ import { storeToRefs } from "pinia";
 const service = axios.create({
     // 公共接口--这里注意后面会讲
     withCredentials: false,
-
-    // 超时时间 单位是ms，这里设置了3s的超时时间
+    // 超时时间 单位是 ms，这里设置了 30 秒的超时时间
     timeout: 30 * 10000
 })
 // 2.请求拦截器
@@ -18,8 +17,7 @@ service.interceptors.request.use(config => {
     //发请求前做的一些处理，数据转化，配置请求头，设置token,设置loading等，根据需求去添加
     const stuserInfoStore = userInfoStore();
     const { username, token } = storeToRefs(stuserInfoStore); // 响应式
-    console.log("token:"+token.value)
-    
+
     // 添加时间戳参数以防止缓存
     if (config.method === "get" || config.method === "GET") {
         config.params = {
@@ -69,6 +67,10 @@ service.interceptors.response.use(response => {
             case 401:
                 error.message = '未授权，请重新登录'
                 window.$message.error(error.message)
+                // 清除用户缓存
+                const stuserInfoStore = userInfoStore();
+                stuserInfoStore.clearUserInfo();
+                // 跳转到登录页
                 window.location.href = "/login"
                 break;
             case 403:
@@ -106,16 +108,16 @@ service.interceptors.response.use(response => {
         }
     } else {
         // 超时处理
-        if (JSON.stringify(error).includes('timeout')) {
-            window.$message.error('服务器响应超时，请刷新当前页')
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('timeout')) {
+            window.$message.error('服务器响应超时，请刷新当前页'+error.message)
+        } else {
+            error.message = '连接服务器失败'
         }
-        error.message = '连接服务器失败'
     }
     window.$message.error(error.message)
-
     /***** 处理结束 *****/
     //如果不需要错误处理，以上的处理过程都可省略
-    return Promise.resolve(error.response)
+    return Promise.reject(error)
 })
 //4.导入文件
 export default service

@@ -43,12 +43,42 @@ let loginp =()=>{
 let loginUsername = ref("");
 let loginPassword = ref("");
 onBeforeMount(()=>{
+  //校验有token参数没  没有直接跳转到登录页清除全部缓存
+  if (!router.currentRoute.value.query.token) {
+    // 清除用户信息缓存
+    stuserInfoStore.clearUserInfo();
+    // 清除配置信息缓存
+    stconfigInfoStore.clearData();
+    stconfigInfoStore.clearOption();
+    stconfigInfoStore.clearVersion();
+    // 清除播放列表缓存（从 localStorage 中移除）
+    localStorage.removeItem('playList');
+    // 跳转到登录页
+    router.replace({path :"/login"}).catch(err => {
+      console.error('路由跳转失败:', err);
+    });
+    return; // 直接返回，不再执行后续的登录状态检查
+  }
+
   stuserInfoStore.isLogin().then((value)=>{
     if (value.data.code===200){
+      // 已登录，跳转到首页
       router.replace({path :"/home"}).catch(err => {
         console.error('路由跳转失败:', err);
       });
+    }else{
+      // 未登录或 token 超时，停留在登录页
+      router.replace({path :"/login"}).catch(err => {
+        console.error('路由跳转失败:', err);
+      });
+      console.log('用户未登录或登录已过期');
     }
+  }).catch((error)=>{
+    router.replace({path :"/login"}).catch(err => {
+      console.error('路由跳转失败:', err);
+    });
+    // 请求失败或网络错误
+    console.error('检查登录状态失败:', error);
   })
 })
 

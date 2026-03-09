@@ -10,6 +10,8 @@ const V3Download = () => import("../components/V3Download.vue")
 const V3DownloadMobile = () => import("../components/V3DownloadMobile.vue")
 const V3ParserPlaylist = () => import("../components/V3ParserPlaylist.vue")
 
+const  Monitor = () => import("../components/Monitor.vue")
+
 // 检测是否为移动设备
 const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -55,6 +57,11 @@ const routes = [
                 path: "/V3Parsertext",
                 name: "V3Parsertext",
                 component: V3Parsertext
+            },
+            {
+                path: "/Monitor",
+                name: "Monitor",
+                component: Monitor
             }
         ]
     }

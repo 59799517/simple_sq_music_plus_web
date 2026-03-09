@@ -72,14 +72,14 @@ onMounted(() => {
   nextTick(() => {
     // 页面加载完成后检查播放列表是否有数据
     if (stplayListStore.playList && stplayListStore.playList.length > 0) {
-      console.log("初始化数据："+JSON.stringify(stplayListStore.playList))
+      // console.log("初始化数据："+JSON.stringify(stplayListStore.playList))
       // 更新本地播放列表
       nowplayList.value = [...stplayListStore.playList];
 
       // 如果播放列表有数据，则更新当前播放信息
       if (stplayListStore.playIndex >= 0 && stplayListStore.playIndex < stplayListStore.playList.length) {
         const currentSong = stplayListStore.playList[stplayListStore.playIndex];
-        console.log("当前播放歌曲："+JSON.stringify(currentSong))
+        // console.log("当前播放歌曲："+JSON.stringify(currentSong))
         nowPlay.value = { ...currentSong };
 
         // 如果有音乐URL，则设置到audio元素
@@ -255,7 +255,7 @@ const clearPlayList = () => {
   if (audioElement.value) {
     // 暂停播放
     audioElement.value.pause();
-    // 清空src
+    // 清空 src
     audioElement.value.src = '';
     // 重置当前时间
     audioElement.value.currentTime = 0;
@@ -266,10 +266,62 @@ const clearPlayList = () => {
   stplayListStore.setCurrentTime(0);
   stplayListStore.setTotalTime(0);
   stplayListStore.setMusicUrl('');
-  // 重置当前播放索引为-1（表示没有正在播放的歌曲）
+  // 重置当前播放索引为 -1（表示没有正在播放的歌曲）
   stplayListStore.playIndex = -1;
 
   window.$message.success("播放列表已清空");
+};
+
+// 删除指定索引的歌曲
+const deleteSong = (index) => {
+  // 检查播放列表是否为空
+  if (!stplayListStore.playList || stplayListStore.playList.length === 0) {
+    window.$message.warning("播放列表为空")
+    return
+  }
+
+  // 检查索引是否有效
+  if (index < 0 || index >= stplayListStore.playList.length) {
+    window.$message.error("无效的歌曲索引")
+    return
+  }
+
+  // 如果要删除的是当前正在播放的歌曲
+  if (index === stplayListStore.playIndex) {
+    const hasMoreSongs = stplayListStore.playList.length > 1
+    
+    // 先删除歌曲
+    stplayListStore.removeSong(index)
+    
+    // 如果还有其他歌曲，则播放同一索引（现在是下一首了）
+    if (hasMoreSongs) {
+      // 确保索引不越界
+      const newIndex = Math.min(index, stplayListStore.playList.length - 1)
+      stplayListStore.setPlayIndex(newIndex)
+    } else {
+      // 是最后一首，停止播放
+      if (audioElement.value) {
+        audioElement.value.pause()
+        audioElement.value.src = ''
+      }
+      stplayListStore.setIsPlaying(false)
+      stplayListStore.setMusicUrl('')
+      stplayListStore.playIndex = -1
+      nowPlay.value = {
+        pic: "https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png"
+      }
+    }
+  } else {
+    // 如果删除的不是当前播放的歌曲
+    if (index < stplayListStore.playIndex) {
+      // 如果删除的是当前播放歌曲之前的歌曲，需要调整播放索引
+      stplayListStore.setPlayIndex(stplayListStore.playIndex - 1)
+    }
+    // 从播放列表中移除该歌曲
+    stplayListStore.removeSong(index)
+  }
+  
+  window.$message.success("删除成功")
 };
 
 // 音频事件处理函数
@@ -757,9 +809,12 @@ const closeMobilePlayer = () => {
                   </n-thing>
                   
                   <template #suffix>
-                    <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
-                    <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="warning">暂停</n-tag>
-                    <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="success">播放</n-tag>
+                    <div style="display: flex; gap: 4px;" @click.stop>
+                      <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
+                      <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="warning">暂停</n-tag>
+                      <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer; flex-shrink: 0;" type="success">播放</n-tag>
+                      <n-tag @click.stop="() => deleteSong(index)" style="cursor: pointer; flex-shrink: 0;" type="error">删除</n-tag>
+                    </div>
                   </template>
                 </n-list-item>
               </n-list>
@@ -839,9 +894,12 @@ const closeMobilePlayer = () => {
             </n-thing>
 
             <template #suffix>
-              <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
-              <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer;" type="warning">暂停</n-tag>
-              <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer;" type="success">播放</n-tag>
+              <div style="display: flex; gap: 4px;" @click.stop>
+                <n-tag v-if="index !== stplayListStore.playIndex" @click.stop="() => playSong(index)" style="cursor: pointer; flex-shrink: 0;">播放</n-tag>
+                <n-tag v-else-if="stplayListStore.isPlaying" @click.stop="() => toggleAudio()" style="cursor: pointer;" type="warning">暂停</n-tag>
+                <n-tag v-else @click.stop="() => toggleAudio()" style="cursor: pointer;" type="success">播放</n-tag>
+                <n-tag @click.stop="() => deleteSong(index)" style="cursor: pointer; flex-shrink: 0;" type="error">删除</n-tag>
+              </div>
             </template>
           </n-list-item>
         </n-list>
@@ -916,5 +974,23 @@ const closeMobilePlayer = () => {
 .n-list-item .n-list-item__suffix {
   flex-shrink: 0;
   margin-left: 10px;
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating-avatar {
+  animation: rotate 8s linear infinite;
+}
+
+.rotating-avatar.paused {
+  animation-play-state: paused;
 }
 </style>

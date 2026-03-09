@@ -33,6 +33,7 @@ export default defineConfig({
       resolvers: [NaiveUiResolver(), MotionResolver()]
     }),
     VitePWA({
+      strategies: 'generateSW',
       manifest: {
         // 安装应用后显示的应用名
         name: "SqMusic",
@@ -60,7 +61,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
       },
       devOptions: {
-        enabled: true
+        enabled: false,
+        type: "module"
       }
 
     })

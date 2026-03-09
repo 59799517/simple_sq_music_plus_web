@@ -97,6 +97,19 @@ export const usePlayListStore = defineStore("playList", {
             this.playList = []
             this.playIndex = 0
         },
+        // 删除指定索引的歌曲
+        removeSong(index) {
+            if (index >= 0 && index < this.playList.length) {
+                this.playList.splice(index, 1)
+                // 如果删除后播放列表为空，重置索引
+                if (this.playList.length === 0) {
+                    this.playIndex = -1
+                } else if (this.playIndex >= this.playList.length) {
+                    // 如果当前索引超出范围，调整为最后一个有效索引
+                    this.playIndex = this.playList.length - 1
+                }
+            }
+        },
         setPlayIndex(index) {
             //判断索引是否存在
             if (this.playList[index]) {

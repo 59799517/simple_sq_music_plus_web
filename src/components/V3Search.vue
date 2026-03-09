@@ -708,7 +708,6 @@ let artist_TableColumns = [
             ghost: true,
             type: 'success',
             onClick: () => {
-              //一会写下载歌手全部专辑接口
               musicDownloadArtist(row).then(value=>{
                 if (value.data.code===200){
                   window.$message.success("开始下载当前歌手：自动适配最高音质下载")

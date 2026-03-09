@@ -17,7 +17,7 @@ import {
   getQQVipWechatQrCode
 } from "../utils/api.js"; //引入仓库
 import Cookies from 'js-cookie';
-import { inject, ref, onMounted } from 'vue';
+import { inject, ref, onMounted, computed } from 'vue';
 
 import userInfoStore from "../stores/user";
 import configInfoStore from "../stores/config";
@@ -175,6 +175,7 @@ let tempModalValue = ref("")
 let tempModalKey = ref("")
 let tempModalKeyNullCheck = ref(0)
 let tempModalDisabled = ref(0)
+let tempOptions = ref("")
 
 //关闭弹窗
 let  closeDialog = ()=>{
@@ -186,6 +187,7 @@ let  closeDialog = ()=>{
   tempModalKey.value=''
   tempModalKeyNullCheck.value=0
   tempModalDisabled.value=0
+  tempOptions.value=''
 }
 
 //打开弹窗
@@ -199,7 +201,17 @@ let openModal =(item)=>{
     tempModalValue =ref(Number(item.configValue));
   }else if(item.configType==="boolean"){
     tempModalValue =ref(JSON.parse(item.configValue));
-  }else{
+  }else if(item.configType==="select"){
+    tempModalValue =ref(item.configValue);
+    // 解析 configOptions JSON 字符串为数组
+    try {
+      tempOptions.value = JSON.parse(item.configOptions);
+    } catch (e) {
+      console.error('解析 configOptions 失败:', e);
+      tempOptions.value = [];
+    }
+  }
+  else{
     tempModalValue =ref(item.configValue);
   }
   tempModalKeyNullCheck.value = item.configNullCheck;
@@ -217,7 +229,7 @@ if (tempModalKeyNullCheck.value===1){
   }
   if (tempModalType==='number'){
     if (tempModalValue.value>=0){
-      window.$message.error("数值类型必须大于等于0")
+      window.$message.error("数值类型必须大于等于 0")
       return;
     }
   }
@@ -226,6 +238,19 @@ if (tempModalKeyNullCheck.value===1){
       window.$message.error("请填写内容")
       return;
     }
+  }
+}
+// 校验 select 类型的值是否在选项列表内
+if (tempModalType==='select'){
+  if (!tempOptions.value || tempOptions.value.length === 0) {
+    window.$message.error("该配置项没有有效的选项列表，请检查数据")
+    return;
+  }
+  // 提取所有选项的 value 值
+  const validValues = tempOptions.value.map(opt => opt.value);
+  if (!validValues.includes(tempModalValue.value)) {
+    window.$message.error(`选择的值 "${tempModalValue.value}" 不在允许的选项中，请重新选择`)
+    return;
   }
 }
   updateConfig(tempModalKey.value,tempModalValue.value).then(value => {
@@ -580,6 +605,15 @@ let  handleFinish = ({
         </div>
         <div v-if="tempModalType==='number'" >
           <n-input-number v-model:value="tempModalValue"  :disabled="tempModalDisabled===1"  />
+        </div>
+        <div v-if="tempModalType==='select'" >
+          <n-select
+            v-model:value="tempModalValue"
+            :options="tempOptions"
+            :disabled="tempModalDisabled===1"
+            placeholder="请选择"
+            :multiple="false"
+          />
         </div>
         <div v-if="tempModalType===''||tempModalType===null" >
           <n-input v-model:value="tempModalValue" :disabled="tempModalDisabled===1" />
