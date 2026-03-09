@@ -103,6 +103,12 @@ jobs:
             --file Dockerfile \
             --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}-arm64 \
             --push
+          # 构建 ARM64 架构 latest 标签
+          docker buildx build . \
+            --platform linux/arm64 \
+            --file Dockerfile \
+            --tag registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:latest-arm64 \
+            --push
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -143,4 +149,10 @@ jobs:
             --platform linux/arm64 \
             --file Dockerfile \
             --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:${{ env.VERSION }}-arm64 \
+            --push
+          # 构建 ARM64 架构 latest 标签
+          docker buildx build . \
+            --platform linux/arm64 \
+            --file Dockerfile \
+            --tag ghcr.io/${{ github.actor }}/simple_sq_music_plus_web:latest-arm64 \
             --push
