@@ -9,6 +9,7 @@ const V3Set = () => import("../components/V3Set.vue")
 const V3Download = () => import("../components/V3Download.vue")
 const V3DownloadMobile = () => import("../components/V3DownloadMobile.vue")
 const V3ParserPlaylist = () => import("../components/V3ParserPlaylist.vue")
+const AliyunSync = () => import("../components/AliyunSync.vue")
 
 const  Monitor = () => import("../components/Monitor.vue")
 
@@ -62,6 +63,11 @@ const routes = [
                 path: "/Monitor",
                 name: "Monitor",
                 component: Monitor
+            },
+            {
+                path: "/AliyunSync",
+                name: "AliyunSync",
+                component: AliyunSync
             }
         ]
     }

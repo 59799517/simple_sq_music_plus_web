@@ -123,6 +123,12 @@ let refreshData= () => {
       //根据configData 的 configKey分组
       configData.value.forEach(item => {
         let stringsKey = item.configKey.split(".");
+        
+        // 跳过 expand.aliyun 开头的配置项（不显示但保留数据）
+        if (item.configKey.startsWith('expand.aliyun')) {
+          return;
+        }
+        
         if (stringsKey[0]==="system") {
           systemConfig.value.push(item)
         }else if (stringsKey[0]==="plug"){
@@ -146,7 +152,8 @@ let refreshData= () => {
             kgbeginendtime.value = item.configValue;
             console.log("plug.kg.sign.begin-end.time:"+item.configValue)
           }
-        }else{
+        }
+        else{
           systemConfig.value.push( item)
         }
       });
@@ -561,7 +568,7 @@ let  handleFinish = ({
           'sqmusic': token,
         }"
         >
-          <n-button style="width: 100%" >导入歌单数据</n-button>
+          <n-button style="margin-top: 10px; width: 100%" >导入歌单数据</n-button>
         </n-upload>
       </div>
 

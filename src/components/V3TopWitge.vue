@@ -1,5 +1,5 @@
 <script setup lang="js">
-import {ref } from 'vue'
+import {ref, computed } from 'vue'
 
 import Set from "./V3Set.vue";
 import {
@@ -11,6 +11,18 @@ const stconfigInfoStore =configInfoStore()
 
 const uploadSpeed = ref("0.00 B/s");
 const downloadSpeed = ref("0.00 B/s");
+
+// 检查是否显示阿里云盘菜单
+const showAliyunSync = computed(() => {
+  const aliyunShowConfig = stconfigInfoStore.data?.find(
+    item => item.configKey === 'plug.aliyun.show'
+  );
+  console.log('阿里云盘显示配置:', aliyunShowConfig);
+  // 如果配置不存在，默认显示；如果配置值为 false（字符串或布尔），则隐藏
+  if (!aliyunShowConfig) return true;
+  const value = aliyunShowConfig.configValue;
+  return value !== 'false' && value !== false;
+});
 // 检测是否为移动设备
 const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -65,19 +77,19 @@ setInterval(()=>{
           </template>
           <p>
             <n-gradient-text :size="12" type="success" >
-              &nbsp;前端版本: {{stconfigInfoStore.uiversion}}
+              &nbsp;前端版本：{{stconfigInfoStore.uiversion}}
             </n-gradient-text>
           </p>
           <p v-if="stconfigInfoStore.version !== stconfigInfoStore.backendVersion">
             <n-gradient-text :size="12" type="info" >
-              &nbsp;后端版本: {{stconfigInfoStore.version}}
+              &nbsp;后端版本：{{stconfigInfoStore.version}}
             </n-gradient-text>
           </p>
         </n-popover>
 
       </div>
       
-      <!-- PC端布局 -->
+      <!-- PC 端布局 -->
       <template v-if="!isMobile()">
         <div class="box">
           <!-- 修改路径，添加 /home 前缀 -->
@@ -106,6 +118,11 @@ setInterval(()=>{
               监听下载
             </n-button>
           </router-link>
+          <router-link v-if="showAliyunSync" active-class="active" to="/AliyunSync">
+            <n-button size="large" quaternary>
+              阿里云盘
+            </n-button>
+          </router-link>
         </div>
         <div class="box">
             <n-button  size="large" quaternary @click="activate('right')">
@@ -113,7 +130,7 @@ setInterval(()=>{
             </n-button>
         </div>
       </template>
-      
+
       <!-- 移动端布局 -->
       <template v-else>
         <div class="box mobile-nav">
@@ -140,6 +157,11 @@ setInterval(()=>{
           <router-link active-class="active" to="/Monitor">
             <n-button size="large" quaternary>
               监听下载
+            </n-button>
+          </router-link>
+          <router-link v-if="showAliyunSync" active-class="active" to="/AliyunSync">
+            <n-button size="large" quaternary>
+              阿里云盘
             </n-button>
           </router-link>
           <n-button size="large" quaternary @click="activate('right')">

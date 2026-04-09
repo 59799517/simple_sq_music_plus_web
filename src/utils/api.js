@@ -1,8 +1,8 @@
 import request from "./request.js";
 import qs from "qs";
 
- // const baseUrl = 'http://127.0.0.1:8099'
-const baseUrl = ''
+ const baseUrl = 'http://127.0.0.1:8099'
+// const baseUrl = ''
 
 
 const configUrl = "/api/config"
@@ -12,6 +12,7 @@ const taskUrl = "/api/task"
 const parserUrl = "/api/parser"
 const plugUrl = "/api/plug"
 const monitorUrl = "/api/monitor"
+const expandUrl = "/api/expand/ali"
 
 
 /**
@@ -572,4 +573,127 @@ export function parserUrlInfo(url) {
         data: {"url":url}
     })
 
+}
+
+/**
+ * 获取阿里云盘授权码 URL
+ * @returns {*}
+ */
+export function getAliyunAuthUrl() {
+    return request({
+        url: baseUrl + expandUrl + "/getAuthorizationCode",
+        method: "post"
+    });
+}
+
+/**
+ * 获取确认授权码
+ * @param code 授权码
+ * @returns {*}
+ */
+export function saveAliyunAuthCode(code,code_verifier) {
+    return request({
+        url: baseUrl + expandUrl + "/getConfirmCode",
+        method: "post",
+        data: {"code": code,"code_verifier":code_verifier}
+    });
+}
+
+/**
+ * 检查 access_token 是否有效
+ * @returns {*}
+ */
+export function checkAccessToken() {
+    return request({
+        url: baseUrl + expandUrl + "/checkAccessToken",
+        method: "get"
+    });
+}
+
+/**
+ * 获取并设置用户信息
+ * @returns {*}
+ */
+export function getAndSetUserInfo() {
+    return request({
+        url: baseUrl + expandUrl + "/getAndSetUserInfo",
+        method: "get"
+    });
+}
+
+/**
+ * 检查文件夹路径
+ * @param path 路径
+ * @returns {*}
+ */
+export function checkFolder(path) {
+    return request({
+        url: baseUrl + expandUrl + "/checkFolder",
+        method: "post",
+        data: {"path": path}
+    });
+}
+
+/**
+ * 获取默认保存路径
+ * @returns {*}
+ */
+export function getDefaultSavePath() {
+    return request({
+        url: baseUrl + expandUrl + "/getDefaultSavePath",
+        method: "get"
+    });
+}
+
+/**
+ * 自动创建文件夹
+ * @param path 路径
+ * @returns {*}
+ */
+export function autoCreateFolder(path) {
+    return request({
+        url: baseUrl + expandUrl + "/autoCreateFolder",
+        method: "post",
+        data: {"path": path}
+    });
+}
+
+/**
+ * 全部歌曲扫描上传全量
+ */
+export function syncOnce() {
+    return request({
+        url: baseUrl + expandUrl + "/syncOnce",
+        method: "get"
+    });
+}
+
+/**
+ * 增量上传
+ */
+export function incrementalSync() {
+    return request({
+        url: baseUrl + expandUrl + "/incrementalSync",
+        method: "get"
+    });
+}
+
+/**
+ * 查询所有已上传的文件列表
+ */
+export function queryAllUploadFile() {
+    return request({
+        url: baseUrl + expandUrl + "/queryAllUploadFile",
+        method: "get"
+    });
+}
+
+/**
+ * 查询所有已上传的文件列表树状展示
+ */
+export function queryAllUploadFileTree() {
+    return request({
+        url: baseUrl + expandUrl + "/queryAllUploadFileTree",
+        method: "get"
+    });
 }
