@@ -19,11 +19,16 @@ RUN if [ ! -f package.json ]; then \
       exit 1; \
     fi
 
-# 安装依赖，添加错误处理
+# 安装依赖,添加错误处理
 RUN echo "Installing dependencies..." && \
     npm install || \
     (echo "npm install failed, trying with --verbose flag" && \
      npm install --verbose)
+
+# 清理 node_modules 缓存并重新安装（解决 PWA 插件问题）
+RUN rm -rf node_modules/.vite && \
+    npm ci --ignore-scripts || \
+    npm install
 
 # 构建前端项目
 RUN npm run build

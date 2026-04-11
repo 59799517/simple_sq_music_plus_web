@@ -45,7 +45,7 @@ export default defineConfig({
         start_url: "/",
         // 至少配置一个图标
         icons: [{
-          // 注意如果应用不是部署在站点根目录则需要相对路径，图片文件放在项目/public/pwa/192x192.png
+          // 注意如果应用不是部署在站点根目录则需要相对路径,图片文件放在项目/public/pwa/192x192.png
           src: "/pwa/logo.png",
           sizes: "192x192",
           type: "image/png"
@@ -59,12 +59,15 @@ export default defineConfig({
       workbox: {
         // 对所有匹配的静态资源进行缓存
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        // 跳过等待,立即激活新的 Service Worker
+        skipWaiting: true,
+        clientsClaim: true
       },
       devOptions: {
         enabled: false,
         type: "module"
       }
-
+    
     })
   ]
 })
