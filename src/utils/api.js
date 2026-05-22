@@ -1,8 +1,13 @@
 import request from "./request.js";
 import qs from "qs";
 
- // const baseUrl = 'http://127.0.0.1:8099'
+//  const baseUrl = 'http://127.0.0.1:8099'
 const baseUrl = ''
+
+// Tidal DASH 代理 URL
+const tidalProxyUrl = '/api/proxy/tidal/direct?url='
+
+export { baseUrl }
 
 
 const configUrl = "/api/config"
@@ -696,4 +701,11 @@ export function queryAllUploadFileTree() {
         url: baseUrl + expandUrl + "/queryAllUploadFileTree",
         method: "get"
     });
+}
+
+/**
+ * 获取 Tidal DASH 代理 URL
+ */
+export function getTidalProxyUrl() {
+    return tidalProxyUrl;
 }

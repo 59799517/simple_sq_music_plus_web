@@ -32,7 +32,8 @@ export const usePlayListStore = defineStore("playList", {
             "totalTime",
             "musicUrl",
             "volume",
-            "playbackRate"
+            "playbackRate",
+            "otherData"
             // 注意：audioElement 不应该被持久化
         ]
     },
@@ -51,6 +52,7 @@ export const usePlayListStore = defineStore("playList", {
     name: "",
     pic: "",
     plugName: "",
+    otherData: null,  // 其他数据，如 DASH 流的 urlType
     isPlaying: false, // 是否正在播放
     currentTime: 0,   // 当前播放时间
     totalTime: 0,     // 总时间
@@ -127,6 +129,7 @@ export const usePlayListStore = defineStore("playList", {
                 this.name = nowPlay.name;
                 this.pic = nowPlay.pic;
                 this.plugName = nowPlay.plugName;
+                this.otherData = nowPlay.otherData || null;  // 保存 otherData
 
                 // 获取播放链接
                 this.fetchMusicUrl(nowPlay);
@@ -173,6 +176,21 @@ export const usePlayListStore = defineStore("playList", {
                 const response = await getMusicUrl(songData, songData.brTypes[0]);
                 if (response.data.code === 200) {
                     this.musicUrl = response.data.data.url;
+                    console.log('✅ 获取到 musicUrl:', this.musicUrl ? '有值' : '空值');
+                    
+                    // 保存 otherData（如 DASH 流的 urlType）
+                    if (response.data.data.otherData) {
+                        console.log('✅ 获取到 otherData:', response.data.data.otherData);
+                        this.otherData = response.data.data.otherData;
+                        // 同时更新播放列表中的歌曲数据
+                        const index = this.playList.findIndex(item => item.id === songData.id);
+                        if (index !== -1) {
+                            this.playList[index].otherData = response.data.data.otherData;
+                            console.log('✅ 已更新播放列表中的 otherData');
+                        }
+                    } else {
+                        console.warn('⚠️ API 返回中没有 otherData');
+                    }
                     console.log("获取播放链接成功:", this.musicUrl);
                     // 找出当前歌曲的索引
                     getLyric(songData.id, songData.plugName).then(getLyricdata => {
@@ -214,6 +232,10 @@ export const usePlayListStore = defineStore("playList", {
         // 设置音量
         setVolume(volume) {
             this.volume = volume;
+        },
+        // 设置音乐 URL
+        setMusicUrl(url) {
+            this.musicUrl = url;
         },
         // 设置播放速度
         setPlaybackRate(rate) {

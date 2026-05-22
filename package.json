@@ -11,6 +11,7 @@
   "dependencies": {
     "@wxperia/liquid-glass-vue": "^1.0.9",
     "axios": "^1.5.0",
+    "dashjs": "^5.1.1",
     "install": "^0.13.0",
     "js-cookie": "^3.0.5",
     "motion-v": "^1.7.1",

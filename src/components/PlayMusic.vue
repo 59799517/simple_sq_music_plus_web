@@ -11,7 +11,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'seek'])
+const emit = defineEmits(['close', 'seek', 'toggle-play'])
 
 // 使用播放列表存储
 const store = usePlayListStore()
@@ -174,7 +174,8 @@ const handleProgressChange = () => {
 
 // 切换播放/暂停状态
 const togglePlay = () => {
-  store.togglePlay()
+  // 通过事件通知 Home.vue 控制播放/暂停
+  emit('toggle-play')
 }
 
 // 播放上一曲

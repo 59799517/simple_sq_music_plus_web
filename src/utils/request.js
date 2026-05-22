@@ -71,10 +71,16 @@ service.interceptors.response.use(response => {
                 const stuserInfoStore = userInfoStore();
                 stuserInfoStore.clearUserInfo();
                 // 跳转到登录页
-                window.location.href = "/login"
+                window.location.href = "/#"
                 break;
             case 403:
-                error.message = '拒绝访问'
+               error.message = 'token已失效，请重新登录'
+                window.$message.error(error.message)
+                // 清除用户缓存
+                const stuserInfoStore1 = userInfoStore();
+                stuserInfoStore1.clearUserInfo();
+                // 跳转到登录页
+                window.location.href = "/#"
                 break;
             case 404:
                 error.message = '请求错误,未找到该资源'

@@ -7,7 +7,12 @@ import { ref,watch ,nextTick, onMounted, onUnmounted } from 'vue';
 import {NButton, NSpace,NTag,NImage,NAvatar,NText, NModal} from "naive-ui"; // Added NModal import
 import usePlayListStore from "../stores/playList";
 import configInfoStore from "../stores/config";
-import {getAllOption} from "../utils/api.js";
+import {getAllOption, getTidalProxyUrl, baseUrl} from "../utils/api.js";
+import * as dashjs from 'dashjs';
+
+// 调试：检查 dashjs 是否正确导入
+console.log('dashjs 导入检查:', dashjs);
+console.log('dashjs.MediaPlayer:', dashjs.MediaPlayer);
 
 
 const router = useRouter()
@@ -24,6 +29,18 @@ const audioElement = ref(null)
 const showMusicDetail = ref(false)
 const isDraggable = ref(true)
 const listContainerRef = ref(null)
+
+// DASH 播放器实例
+let dashPlayer = null
+// 当前是否为 DASH 流
+const isDashStream = ref(false)
+// 保存 DASH 流暂停时的时间
+let dashPauseTime = 0
+
+// 监听 isDashStream 变化，用于调试
+watch(isDashStream, (newValue, oldValue) => {
+  console.log('🔍 isDashStream 变化:', oldValue, '->', newValue);
+});
 
 // 检测是否为移动设备
 const isMobile = () => {
@@ -104,11 +121,20 @@ onMounted(() => {
 
   // 添加键盘事件监听器
   window.addEventListener('keydown', handleKeyDown);
+  
+  // 🚀 预检查 dash.js 是否可用（不创建实例，避免 reset 错误）
+  if (typeof dashjs !== 'undefined' && dashjs.MediaPlayer) {
+    console.log('✅ dash.js 库已加载，将在播放时创建实例');
+  } else {
+    console.warn('⚠️ dash.js 未加载');
+  }
 });
 
 // 组件卸载时移除键盘事件监听器
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  // 清理 DASH 播放器
+  stopDashPlayback();
 });
 
 // 监听 当前播放ID 的变化
@@ -152,12 +178,21 @@ watch(
         if (stplayListStore.playIndex >= 0 && stplayListStore.playIndex < newPlayList.length) {
           const currentSong = newPlayList[stplayListStore.playIndex];
           nowPlay.value = { ...currentSong };
+          
+          // 检查新歌曲是否为 DASH 流，如果不是则停止 DASH 播放器
+          if (!currentSong.otherData || currentSong.otherData.urlType !== 'DASH') {
+            if (isDashStream.value) {
+              stopDashPlayback();
+            }
+          }
         }
       } else {
         // 如果播放列表为空，使用默认图片
         nowPlay.value = {
           pic: "https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png"
         };
+        // 停止 DASH 播放器
+        stopDashPlayback();
       }
 
       // 在下次DOM更新后滚动到当前播放的歌曲
@@ -233,6 +268,34 @@ const handleItemClick = (index) => {
   }
 };
 
+// 处理 PlayMusic 组件的播放/暂停切换事件
+const handleTogglePlay = () => {
+  console.log('🎵 收到 toggle-play 事件');
+  console.log('当前 isPlaying:', stplayListStore.isPlaying);
+  console.log('isDashStream:', isDashStream.value);
+  console.log('dashPlayer 存在:', !!dashPlayer);
+  
+  // 只要 dashPlayer 存在，就直接控制它（不管 isDashStream 的值）
+  if (dashPlayer) {
+    // DASH 流：直接控制播放器
+    if (stplayListStore.isPlaying) {
+      // 暂停 - dash.js 会触发 PLAYBACK_PAUSED 事件，在其中保存时间
+      console.log('⏸️ 准备暂停 DASH');
+      dashPlayer.pause();
+      console.log('✅ DASH 已调用 pause()');
+    } else {
+      // 恢复播放 - dash.js 会自动从暂停位置继续
+      console.log('▶️ 准备恢复 DASH 播放');
+      dashPlayer.play();
+      console.log('✅ DASH 已调用 play()');
+    }
+  } else {
+    // 普通音频：通过 store 控制
+    console.log('ℹ️ 普通音频，调用 store.togglePlay()');
+    stplayListStore.togglePlay();
+  }
+};
+
 // 显示歌曲详情
 const showSongDetail = () => {
   showMusicDetail.value = true;
@@ -250,6 +313,13 @@ const clearPlayList = () => {
   nowPlay.value = {
     pic:"https://h5static.kuwo.cn/upload/image/4f768883f75b17a426c95b93692d98bec7d3ee9240f77f5ea68fc63870fdb050.png"
   };
+
+  // 停止 DASH 播放器
+  if (dashPlayer) {
+    dashPlayer.reset();
+    dashPlayer = null;
+  }
+  isDashStream.value = false;
 
   // 重置音频元素
   if (audioElement.value) {
@@ -300,6 +370,7 @@ const deleteSong = (index) => {
       stplayListStore.setPlayIndex(newIndex)
     } else {
       // 是最后一首，停止播放
+      stopDashPlayback();
       if (audioElement.value) {
         audioElement.value.pause()
         audioElement.value.src = ''
@@ -326,33 +397,55 @@ const deleteSong = (index) => {
 
 // 音频事件处理函数
 const handleLoadedMetadata = () => {
-  if (audioElement.value) {
+  // 只有在非 DASH 流的情况下才处理元数据
+  if (audioElement.value && (!isDashStream.value || !dashPlayer)) {
     stplayListStore.setTotalTime(audioElement.value.duration)
   }
 }
 
 const handleTimeUpdate = () => {
-  if (audioElement.value) {
+  // 只有在非 DASH 流的情况下才处理时间更新
+  if (audioElement.value && (!isDashStream.value || !dashPlayer)) {
     stplayListStore.setCurrentTime(audioElement.value.currentTime)
   }
 }
 
 const handlePlay = () => {
-  stplayListStore.setIsPlaying(true)
+  // 只有在非 DASH 流的情况下才设置播放状态
+  if (!isDashStream.value || !dashPlayer) {
+    stplayListStore.setIsPlaying(true)
+  }
 }
 
 const handlePause = () => {
-  stplayListStore.setIsPlaying(false)
+  // 只有在非 DASH 流的情况下才设置暂停状态
+  if (!isDashStream.value || !dashPlayer) {
+    stplayListStore.setIsPlaying(false)
+  }
 }
 
 const handleEnded = () => {
-  stplayListStore.setIsPlaying(false)
-  stplayListStore.setCurrentTime(0)
-  // 自动播放下一首
-  stplayListStore.playNext()
+  // 只有在非 DASH 流的情况下才处理结束事件
+  if (!isDashStream.value || !dashPlayer) {
+    stplayListStore.setIsPlaying(false)
+    stplayListStore.setCurrentTime(0)
+    // 自动播放下一首
+    stplayListStore.playNext()
+  }
 }
 
 const handleError = (e) => {
+  // 检查是否为 DASH 流，如果是则不处理这个错误
+  const currentSong = stplayListStore.playList && stplayListStore.playList.length > 0 
+    ? stplayListStore.playList[stplayListStore.playIndex] 
+    : null;
+  
+  if (currentSong && currentSong.otherData && currentSong.otherData.urlType === 'DASH') {
+    // 这是 DASH 流，让 dash.js 处理错误
+    console.log("DASH 流错误，由 dash.js 处理");
+    return;
+  }
+
   // 如果播放列表为空，则不显示错误（可能是清空播放列表导致的正常现象）
   if (!stplayListStore.playList || stplayListStore.playList.length === 0) {
     console.log("播放列表为空，忽略音频错误");
@@ -360,37 +453,88 @@ const handleError = (e) => {
   }
 
   console.error("音频播放出错:", e);
-  // 检查 e 是否存在以及是否有具体的错误信息
-  if (e && e.target && e.target.error) {
-    switch (e.target.error.code) {
-      case e.target.error.MEDIA_ERR_ABORTED:
-        window.$message.error("媒体播放被中止");
-        break;
-      case e.target.error.MEDIA_ERR_NETWORK:
-        window.$message.error("网络错误导致媒体加载失败");
-        break;
-      case e.target.error.MEDIA_ERR_DECODE:
-        window.$message.error("媒体解码失败");
-        break;
-      case e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        window.$message.error("不支持的媒体源或格式");
-        break;
-      default:
-        window.$message.error("音频播放出错，请检查网络或文件格式");
-        break;
-    }
-  } else {
-    window.$message.error("音频播放出错，请检查网络或文件格式");
-  }
-
+  
+  // 静默处理切换时的临时错误，不显示弹框
+  // 只在真正需要用户注意时才显示错误
+  
   // 确保播放状态被正确设置为停止
   stplayListStore.setIsPlaying(false);
 }
 
 // 监听音乐URL变化，更新音频元素的src
 watch(() => stplayListStore.musicUrl, (newUrl) => {
-  console.log("音乐URL变化:", newUrl)
+  console.log("🎵 音乐URL变化:", newUrl ? '有值' : '空值')
+  
+  // 重要：先检查当前歌曲的类型，再决定如何处理
+  const currentSong = stplayListStore.playList && stplayListStore.playList.length > 0 
+    ? stplayListStore.playList[stplayListStore.playIndex] 
+    : null;
+  
+  console.log('🔍 watch musicUrl - 当前歌曲:', currentSong?.name);
+  console.log('🔍 watch musicUrl - otherData:', currentSong?.otherData);
+  console.log('🔍 watch musicUrl - playIndex:', stplayListStore.playIndex);
+  
+  // 检查是否为 DASH 流（优先使用 otherData，其次使用 url 特征）
+  const isDash = currentSong && (
+    (currentSong.otherData && currentSong.otherData.urlType === 'DASH') ||
+    (newUrl && (newUrl.includes('<MPD') || newUrl.includes('dash+xml')))
+  );
+  
+  if (isDash) {
+    console.log("✅ watch 检测到 DASH 流 URL 变化")
+    // DASH 流的播放由 playAudio 函数处理，不设置到 audio 元素
+    if (stplayListStore.shouldAutoPlay) {
+      nextTick(() => {
+        setTimeout(() => {
+          playAudio()
+        }, 100)
+      })
+      stplayListStore.shouldAutoPlay = false
+    }
+    return
+  }
 
+  // 普通音频处理
+  console.log("ℹ️ watch 处理普通音频 URL")
+  
+  // 如果是从 DASH 切换到普通音频，需要先清理 DASH 播放器
+  if (isDashStream.value || dashPlayer) {
+    console.log('🧹 watch: 检测到从 DASH 切换到普通音频，清理 DASH 播放器');
+    stopDashPlayback();
+    
+    // 等待更长时间确保清理完成（增加到 500ms）
+    setTimeout(() => {
+      if (audioElement.value && newUrl && newUrl.trim() !== '') {
+        console.log('✅ watch: DASH 清理完成，设置普通音频 URL');
+        
+        // 再次确保 audio 元素是干净的
+        audioElement.value.pause();
+        audioElement.value.removeAttribute('src');
+        audioElement.value.src = '';
+        audioElement.value.load();
+        
+        // 然后设置新 URL
+        audioElement.value.src = newUrl;
+        
+        // 如果有自动播放标志，则直接播放（不调用 playAudio，避免重复检查）
+        if (stplayListStore.shouldAutoPlay) {
+          nextTick(() => {
+            setTimeout(() => {
+              console.log('▶️ watch: 自动播放普通音频');
+              audioElement.value.play().catch(error => {
+                // 静默处理播放错误，不显示弹框
+                console.error('❌ watch: 播放失败:', error);
+                stplayListStore.setIsPlaying(false);
+              });
+            }, 200)
+          })
+          stplayListStore.shouldAutoPlay = false
+        }
+      }
+    }, 500); // 增加到 500ms，确保完全清理
+    return;
+  }
+  
   if (audioElement.value) {
     // 检查URL是否有效
     if (!newUrl || newUrl.trim() === '') {
@@ -400,12 +544,17 @@ watch(() => stplayListStore.musicUrl, (newUrl) => {
 
     audioElement.value.src = newUrl
 
-    // 如果有自动播放标志，则开始播放
+    // 如果有自动播放标志，则直接播放（不调用 playAudio）
     if (stplayListStore.shouldAutoPlay) {
       nextTick(() => {
         // 添加一个小延迟确保src已更新
         setTimeout(() => {
-          playAudio()
+          console.log('▶️ watch: 自动播放普通音频');
+          audioElement.value.play().catch(error => {
+            // 静默处理播放错误，不显示弹框
+            console.error('❌ watch: 播放失败:', error);
+            stplayListStore.setIsPlaying(false);
+          });
         }, 100)
       })
       stplayListStore.shouldAutoPlay = false
@@ -415,6 +564,11 @@ watch(() => stplayListStore.musicUrl, (newUrl) => {
 
 // 播放音频
 const playAudio = () => {
+  console.log('=== playAudio 被调用 ===');
+  console.log('播放列表:', stplayListStore.playList);
+  console.log('当前索引:', stplayListStore.playIndex);
+  console.log('音乐URL:', stplayListStore.musicUrl);
+  
   // 检查播放列表是否为空
   if (!stplayListStore.playList || stplayListStore.playList.length === 0) {
     console.warn("播放列表为空，无法播放")
@@ -431,9 +585,63 @@ const playAudio = () => {
     return
   }
 
+  // 检查是否为 DASH 流
+  const currentSong = stplayListStore.playList[stplayListStore.playIndex]
+  console.log('当前歌曲:', currentSong);
+  console.log('otherData:', currentSong?.otherData);
+  
+  if (currentSong && currentSong.otherData && currentSong.otherData.urlType === 'DASH') {
+    console.log("✅ 检测到 DASH 流，使用 dash.js 播放")
+    // 确保 URL 存在
+    if (!stplayListStore.musicUrl || stplayListStore.musicUrl.trim() === '') {
+      if (currentSong.url && currentSong.url.trim() !== '') {
+        stplayListStore.setMusicUrl(currentSong.url)
+      } else {
+        window.$message.error("没有可播放的 DASH 音频文件")
+        stplayListStore.setIsPlaying(false)
+        return
+      }
+    }
+    playDashMpd(stplayListStore.musicUrl)
+    return
+  }
+
+  console.log("ℹ️ 普通音频播放");
+  // 普通音频播放逻辑
+  
+  // 重要：如果是从 DASH 切换到普通音频，需要先清理 DASH 播放器
+  if (isDashStream.value || dashPlayer) {
+    console.log('🧹 检测到之前是 DASH 流，先清理 DASH 播放器');
+    stopDashPlayback();
+    
+    // 等待更长时间，确保 audio 元素完全重置（增加到 300ms）
+    // 这样可以避免 "MEDIA_ERR_SRC_NOT_SUPPORTED" 错误
+    setTimeout(() => {
+      console.log('✅ DASH 清理完成，继续播放普通音频');
+      
+      // 再次确保 audio 元素是干净的
+      if (audioElement.value) {
+        audioElement.value.pause();
+        audioElement.value.removeAttribute('src');
+        audioElement.value.src = '';
+        audioElement.value.load();
+      }
+      
+      playNormalAudio();
+    }, 300);
+    return;
+  }
+  
+  // 如果不是从 DASH 切换，直接播放
+  playNormalAudio();
+}
+
+// 播放普通音频的辅助函数
+const playNormalAudio = () => {
+  const currentSong = stplayListStore.playList[stplayListStore.playIndex]
+  
   // 检查音乐URL是否有效
   if (!stplayListStore.musicUrl || stplayListStore.musicUrl.trim() === '') {
-    const currentSong = stplayListStore.playList[stplayListStore.playIndex]
     if (!currentSong || !currentSong.url || currentSong.url.trim() === '') {
       window.$message.error("没有可播放的音频文件")
       stplayListStore.setIsPlaying(false)
@@ -471,23 +679,48 @@ const playAudio = () => {
 
 // 暂停音频
 const pauseAudio = () => {
-  if (audioElement.value) {
+  if (isDashStream.value && dashPlayer) {
+    // DASH 流暂停 - 使用 dash.js 的 pause 方法
+    dashPlayer.pause();
+    stplayListStore.setIsPlaying(false);
+  } else if (audioElement.value) {
     audioElement.value.pause()
   }
 }
 
 // 切换播放/暂停状态
 const toggleAudio = () => {
-  if (stplayListStore.isPlaying) {
-    pauseAudio()
+  console.log('🎵 toggleAudio 被调用');
+  console.log('当前 isPlaying:', stplayListStore.isPlaying);
+  console.log('dashPlayer 存在:', !!dashPlayer);
+  
+  // 只要 dashPlayer 存在，就直接控制它（不管 isDashStream 的值）
+  if (dashPlayer) {
+    // DASH 流：直接控制播放器
+    if (stplayListStore.isPlaying) {
+      // 暂停 - dash.js 会触发 PLAYBACK_PAUSED 事件，在其中保存时间
+      console.log('⏸️ 准备暂停 DASH');
+      dashPlayer.pause();
+      console.log('✅ DASH 已调用 pause()');
+    } else {
+      // 恢复播放 - dash.js 会自动从暂停位置继续
+      console.log('▶️ 准备恢复 DASH 播放');
+      dashPlayer.play();
+      console.log('✅ DASH 已调用 play()');
+    }
   } else {
-    playAudio()
+    // 普通音频：通过 store 控制
+    console.log('ℹ️ 普通音频，调用 store.togglePlay()');
+    stplayListStore.togglePlay();
   }
-}
+};
 
 // 跳转到指定时间
 const seekAudio = (time) => {
-  if (audioElement.value) {
+  if (isDashStream.value && dashPlayer) {
+    // DASH 流跳转
+    dashPlayer.seek(time);
+  } else if (audioElement.value) {
     audioElement.value.currentTime = time
   }
 }
@@ -507,13 +740,269 @@ const seekTo = (time) => {
 
 // 设置音量
 const setAudioVolume = (volume) => {
-  if (audioElement.value) {
+  if (isDashStream.value && dashPlayer) {
+    // DASH 流音量控制
+    dashPlayer.setVolume(volume);
+  } else if (audioElement.value) {
     audioElement.value.volume = volume
   }
 }
 
-// 监听播放状态变化
+// 停止 DASH 播放 - 对应 tidal-player.html 第 149-157 行的 stopPlayback 函数
+const stopDashPlayback = () => {
+  console.log('🛑 stopDashPlayback 被调用');
+  
+  if (dashPlayer) {
+    try {
+      console.log('🔄 开始清理 dashPlayer...');
+      
+      // 先暂停播放
+      dashPlayer.pause();
+      console.log('✅ 已暂停播放');
+      
+      // 然后重置播放器
+      dashPlayer.reset();
+      console.log('✅ dashPlayer.reset() 完成');
+    } catch (e) {
+      console.warn('⚠️ dashPlayer 清理出错:', e);
+    }
+    
+    // 最后将播放器设为 null
+    dashPlayer = null;
+    console.log('✅ dashPlayer 已设为 null');
+  }
+  
+  isDashStream.value = false;
+  dashPauseTime = 0; // 重置暂停时间
+  
+  if (audioElement.value) {
+    try {
+      console.log('🔄 开始清理 audioElement...');
+      
+      // 先暂停
+      audioElement.value.pause();
+      
+      // 清空所有源
+      audioElement.value.removeAttribute('src');
+      audioElement.value.src = '';
+      audioElement.value.srcObject = null;
+      
+      // 移除所有子 source 元素
+      while (audioElement.value.firstChild) {
+        audioElement.value.removeChild(audioElement.value.firstChild);
+      }
+      
+      // 强制加载空源，清除 MediaSource
+      audioElement.value.load();
+      
+      console.log('✅ audioElement 已清理');
+    } catch (e) {
+      console.warn('⚠️ audioElement 清理出错:', e);
+    }
+  }
+  
+  console.log('✅ stopDashPlayback 完成');
+}
+
+// 播放 DASH MPD - 完全按照 tidal-player.html 第 159-242 行的 playMpd 函数
+const playDashMpd = (mpdData) => {
+  console.log('=== playDashMpd 被调用 ===');
+  
+  // 对应 tidal-player.html 第 160 行：stopPlayback()
+  stopDashPlayback();
+  
+  // 对应 tidal-player.html 第 164 行：检查 dash.js 是否加载
+  if (typeof dashjs === 'undefined') {
+    console.error('❌ dash.js 未加载');
+    window.$message.error('dash.js 未加载');
+    return;
+  }
+  
+  console.log('✅ dash.js 已加载');
+  
+  let mpdXml;
+  
+  // 对应 tidal-player.html 第 171-178 行：判断是 Data URI 还是原始 XML
+  if (mpdData.startsWith('data:application/dash+xml;base64,')) {
+    // Base64 编码的 MPD（兼容旧格式）
+    const base64Content = mpdData.replace('data:application/dash+xml;base64,', '');
+    mpdXml = atob(base64Content);
+    console.log('从 Data URI 解码 MPD');
+  } else {
+    // 原始 XML 字符串
+    mpdXml = mpdData;
+    console.log('使用原始 XML MPD');
+  }
+  
+  // 对应 tidal-player.html 第 180-182 行：输出 MPD 内容
+  console.log('===== 原始 MPD 内容（前2000字符）=====');
+  console.log(mpdXml.substring(0, 2000));
+  console.log('=====================================');
+  
+  // 对应 tidal-player.html 第 185-186 行：查找所有 URL 属性
+  const allUrls = mpdXml.match(/(sourceURL|media|initialization)=["']([^"']+)["']/g);
+  console.log('找到的所有 URL 属性:', allUrls);
+  
+  // 对应 tidal-player.html 第 190-191 行：设置代理前缀（使用后端服务器地址）
+  const proxyPrefix = baseUrl + '/api/proxy/tidal/direct?url=';
+  console.log('代理前缀:', proxyPrefix);
+  
+  // 对应 tidal-player.html 第 194-204 行：替换所有 HTTPS URL
+  let replaceCount = 0;
+  const modifiedMpd = mpdXml.replace(
+    /(initialization|media|sourceURL)="(https?:\/\/[^\"]+)"/g,
+    (match, attr, url) => {
+      replaceCount++;
+      // URL 编码时保留 $Number$ 不被编码
+      const encodedUrl = encodeURIComponent(url).replace(/%24Number%24/g, '$Number$');
+      const finalUrl = `${proxyPrefix}${encodedUrl}`;
+      console.log(`🔗 替换 ${replaceCount}:`);
+      console.log(`   原始: ${url.substring(0, 100)}...`);
+      console.log(`   代理: ${finalUrl.substring(0, 150)}...`);
+      return `${attr}="${finalUrl}"`;
+    }
+  );
+  
+  // 对应 tidal-player.html 第 206 行：输出替换数量
+  console.log(`总共替换了 ${replaceCount} 个 URL`);
+  
+  // 对应 tidal-player.html 第 208-209 行：输出修改前后的 MPD
+  console.log('原始 MPD:', mpdXml.substring(0, 500));
+  console.log('修改后 MPD:', modifiedMpd.substring(0, 500));
+  
+  // 对应 tidal-player.html 第 212-221 行：检查 URL 替换情况
+  const urlMatches = mpdXml.match(/(sourceURL|media)=\"(https?:\/\/[^\"]+)\"/g);
+  console.log('找到的 URL 数量:', urlMatches ? urlMatches.length : 0);
+  if (urlMatches) {
+    console.log('原始 URLs:', urlMatches);
+  }
+  
+  const modifiedMatches = modifiedMpd.match(/(sourceURL|media)=\"([^\"]+)\"/g);
+  if (modifiedMatches) {
+    console.log('修改后 URLs:', modifiedMatches);
+  }
+  
+  // 对应 tidal-player.html 第 224-225 行：重新编码为 Data URI
+  const modifiedBase64 = btoa(modifiedMpd);
+  const modifiedDataUri = 'data:application/dash+xml;base64,' + modifiedBase64;
+  
+  console.log('📦 Data URI 长度:', modifiedDataUri.length);
+  console.log('📦 Data URI 前100字符:', modifiedDataUri.substring(0, 100));
+  
+  // 对应 tidal-player.html 第 227-228 行：创建并初始化 dash.js 播放器
+  if (!audioElement.value) {
+    console.error('❌ audioElement.value 为 null');
+    window.$message.error('音频元素未准备好');
+    return;
+  }
+  
+  console.log('🎵 创建 dash.js MediaPlayer');
+  dashPlayer = dashjs.MediaPlayer().create();
+  console.log('✅ dashPlayer 创建成功');
+  
+  console.log('🎵 调用 initialize');
+  dashPlayer.initialize(audioElement.value, modifiedDataUri, true);
+  console.log('✅ initialize 调用完成');
+  
+  // 对应 tidal-player.html 第 230-232 行：监听 STREAM_INITIALIZED 事件
+  dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+    console.log('✅✅✅ DASH 流初始化成功，可以播放了');
+    // 重置暂停时间
+    dashPauseTime = 0;
+    stplayListStore.setIsPlaying(true);
+    
+    // 设置总时长
+    const duration = dashPlayer.duration();
+    if (duration && duration > 0) {
+      stplayListStore.setTotalTime(duration);
+      console.log('DASH 流总时长:', duration);
+    }
+  });
+  
+  // 使用定时器更新进度（替代 TIME_UPDATED 事件）
+  let progressTimer = null;
+  const startProgressUpdate = () => {
+    if (progressTimer) return;
+    progressTimer = setInterval(() => {
+      if (dashPlayer && !dashPlayer.isPaused()) {
+        const currentTime = dashPlayer.time();
+        stplayListStore.setCurrentTime(currentTime);
+      }
+    }, 500); // 每 500ms 更新一次
+  };
+  
+  const stopProgressUpdate = () => {
+    if (progressTimer) {
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+  };
+  
+  // 监听播放开始
+  dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_STARTED, () => {
+    console.log('▶️ DASH 播放开始 - 设置 isPlaying = true');
+    stplayListStore.setIsPlaying(true);
+    startProgressUpdate();
+  });
+  
+  // 监听播放暂停
+  dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_PAUSED, () => {
+    console.log('⏸️ DASH 播放暂停 - 设置 isPlaying = false');
+    // 保存暂停时的时间
+    dashPauseTime = dashPlayer.time();
+    console.log('💾 保存暂停时间:', dashPauseTime);
+    stplayListStore.setIsPlaying(false);
+    stopProgressUpdate();
+  });
+  
+  // 监听播放结束
+  dashPlayer.on(dashjs.MediaPlayer.events.PLAYBACK_ENDED, () => {
+    console.log('⏹️ DASH 播放结束 - 准备切换到下一曲');
+    dashPauseTime = 0; // 重置暂停时间
+    stplayListStore.setIsPlaying(false);
+    stopProgressUpdate();
+    
+    // 重要：不要在这里重置 isDashStream 或清理播放器
+    // 等待 playAudio() 根据下一首歌曲的类型决定如何处理
+    
+    // 自动播放下一曲 - 添加小延迟确保状态更新完成
+    setTimeout(() => {
+      console.log('🔄 调用 playNext()');
+      stplayListStore.playNext();
+    }, 50);
+  });
+  
+  // 对应 tidal-player.html 第 234-237 行：监听 ERROR 事件
+  dashPlayer.on(dashjs.MediaPlayer.events.ERROR, (e) => {
+    console.error('❌ DASH 错误:', e);
+    
+    // 提取更详细的错误信息
+    let errorMsg = '未知错误';
+    if (e.error) {
+      errorMsg = e.error.message || e.error.code || '未知错误';
+    }
+    
+    // 静默处理所有 DASH 错误，不显示弹框
+    // 只在控制台记录错误信息
+    
+    stplayListStore.setIsPlaying(false);
+    stopProgressUpdate();
+  });
+  
+  isDashStream.value = true;
+  console.log('✅ DASH 播放器设置完成');
+}
+
+// 监听播放状态变化 - 仅用于普通音频，DASH 流由事件驱动
 watch(() => stplayListStore.isPlaying, (isPlaying) => {
+  // DASH 流不通过这个 watch 控制，由 dash.js 事件驱动
+  if (isDashStream.value && dashPlayer) {
+    console.log('⚠️ DASH 流跳过 watch 控制，由事件驱动');
+    return;
+  }
+  
+  // 普通音频控制
+  console.log('🎵 普通音频 isPlaying 状态变化:', isPlaying);
   if (isPlaying) {
     playAudio()
   } else {
@@ -530,7 +1019,12 @@ watch(() => stplayListStore.volume, (volume) => {
 watch(() => stplayListStore.currentTime, (time) => {
   // 使用一个简单的条件来避免不必要的跳转
   // 只有当audio元素的当前时间和store中的时间差异较大时才跳转
-  if (audioElement.value && Math.abs(audioElement.value.currentTime - time) > 0.5) {
+  if (isDashStream.value && dashPlayer) {
+    // DASH 流跳转
+    if (Math.abs(dashPlayer.time() - time) > 0.5) {
+      seekAudio(time)
+    }
+  } else if (audioElement.value && Math.abs(audioElement.value.currentTime - time) > 0.5) {
     seekAudio(time)
   }
 })
@@ -542,6 +1036,7 @@ watch(() => stplayListStore.playList, (newPlayList) => {
 
   // 如果播放列表为空，重置播放状态
   if (!newPlayList || newPlayList.length === 0) {
+    stopDashPlayback();
     stplayListStore.setIsPlaying(false)
     stplayListStore.setCurrentTime(0)
     stplayListStore.setTotalTime(0)
@@ -698,7 +1193,7 @@ const closeMobilePlayer = () => {
     <!-- 隐藏的音频元素 -->
     <audio
         ref="audioElement"
-        :src="stplayListStore.musicUrl"
+        :src="stplayListStore.musicUrl && (!stplayListStore.playList[stplayListStore.playIndex]?.otherData?.urlType || stplayListStore.playList[stplayListStore.playIndex]?.otherData?.urlType !== 'DASH') ? stplayListStore.musicUrl : null"
         preload="auto"
         @loadedmetadata="handleLoadedMetadata"
         @timeupdate="handleTimeUpdate"
@@ -715,6 +1210,7 @@ const closeMobilePlayer = () => {
         :visible="showMusicDetail"
         @close="hideSongDetail"
         @seek="seekTo"
+        @toggle-play="handleTogglePlay"
     />
     <!-- 移动端播放器模态框 -->
     <n-modal
