@@ -82,7 +82,7 @@ const downloadAllAlbums = () => {
 
   musicDownloadArtist(data).then(response => {
     if (response.data.code === 200) {
-      window.$message.success("开始下载当前歌手：自动适配最高音质下载")
+      window.$message.success("开始下载当前歌手：已按照设置下载对应音质文件")
     } else {
       window.$message.error("下载失败: " + response.data.msg)
     }

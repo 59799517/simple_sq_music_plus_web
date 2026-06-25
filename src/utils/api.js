@@ -1,11 +1,25 @@
 import request from "./request.js";
 import qs from "qs";
+import configInfoStore from "../stores/config.js";
 
 //  const baseUrl = 'http://127.0.0.1:8099'
 const baseUrl = ''
 
 // Tidal DASH 代理 URL
 const tidalProxyUrl = '/api/proxy/tidal/direct?url='
+
+/**
+ * 获取全局下载格式设置（system.download.file.audio.format）
+ * @returns {string} 格式值，未设置时返回空字符串
+ */
+function getDownloadFormat() {
+    try {
+        const store = configInfoStore()
+        return store.getDownloadFormat || ''
+    } catch (e) {
+        return ''
+    }
+}
 
 export { baseUrl }
 
@@ -116,6 +130,8 @@ export function searchTips(plugName,keyword) {
  */
 export function getMusicUrl(data,brType) {
     data["brType"] = brType;
+    const downloadFormat = getDownloadFormat();
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl +musicUrl+ "/getDownloadUrl",
         method: "post",
@@ -207,6 +223,8 @@ export function musicSearch(plugName,searType = "music",keyword,pageSize=20,page
  */
 export function musicDownload(data,brType) {
     data["brType"] = brType;
+    const downloadFormat = getDownloadFormat();
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl +downloadUrl+ "/downloadSong",
         method: "post",
@@ -218,6 +236,8 @@ export function musicDownload(data,brType) {
  * 根据专辑ID下载专辑内所有歌曲
  */
 export function musicDownloadAlbum(data) {
+    const downloadFormat = getDownloadFormat();
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl +downloadUrl+ "/downloadAlbum",
         method: "post",
@@ -229,6 +249,8 @@ export function musicDownloadAlbum(data) {
  * 根据歌手ID下载全部专辑内的歌曲
  */
 export function musicDownloadArtist(data) {
+    const downloadFormat = getDownloadFormat();
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl +downloadUrl+ "/downloadArtistAlbum",
         method: "post",
@@ -373,10 +395,13 @@ export function refreshTask() {
  * @returns {*}
  */
 export function downloadParserText(text) {
+    const downloadFormat = getDownloadFormat();
+    const data = {"text":text};
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl + downloadUrl+"/downloadParserText",
         method: "post",
-        data: {"text":text}
+        data: data
     });
 }
 
@@ -390,10 +415,13 @@ export function downloadParserText(text) {
  * @returns {*}
  */
 export function parserUrlAndDownload(url,isAudioBook,bookName,artist) {
+    const downloadFormat = getDownloadFormat();
+    const data = {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist};
+    if (downloadFormat) data["downloadFormat"] = downloadFormat;
     return request({
         url: baseUrl +downloadUrl+ "/downloadParserUrl",
         method: "post",
-        data: {"url":url,"isAudioBook":isAudioBook,"bookName":bookName,"artist":artist}
+        data: data
     });
 
 

@@ -17,7 +17,11 @@ const configInfoStore = defineStore('configInfo', {
     }),
     getters: {
         getData: (state) => state.data,
-        getOption: (state) => state.option
+        getOption: (state) => state.option,
+        getDownloadFormat: (state) => {
+            const item = state.data.find(item => item.configKey === 'system.download.file.audio.format')
+            return item ? item.configValue : ''
+        }
     },
     actions: {
         setData(data) {

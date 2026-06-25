@@ -152,7 +152,7 @@ const downloadAlbum = () => {
   }
   musicDownloadAlbum(data).then(value=>{
     if (value.data.code===200){
-      window.$message.success("开始下载当前专辑：自动适配最高音质下载")
+      window.$message.success("开始下载当前专辑：已按照设置下载对应音质文件")
     }else{
       window.$message.error("操作失败："+value.data.msg)
     }
