@@ -390,6 +390,20 @@ export function refreshTask() {
 }
 
 /**
+ * 查询下载错误的任务的重新下载子任务信息 errorTaskRetry
+ */
+export function errorTaskRetry(id) {
+    return request({
+        url: baseUrl + taskUrl+"/errorTaskRetry",
+        method: "post",
+        data:{
+            "id": id
+        }
+    });
+}
+
+
+/**
  * 文本解析下载
  * @param text
  * @returns {*}

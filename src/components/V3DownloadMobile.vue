@@ -60,6 +60,14 @@ let select_download_status_options = ref([
   {
     label: "下载失败",
     value: "error"
+  },
+  {
+    label: "补充下载中",
+    value: "supplement"
+  },
+  {
+    label: "补充成功",
+    value: "supplement_success"
   }
 ])
 
@@ -183,6 +191,25 @@ let refreshTask_b = () => {
   })
 }
 
+let againTask_b = () => {
+  window.$dialog.warning({
+    title: '警告',
+    content: '确定重新下载所有错误任务？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      againTask().then(value => {
+        if (value.data.code === 200) {
+          window.$message.success("操作成功")
+        } else {
+          window.$message.error("操作失败：" + value.data.msg)
+        }
+      })
+    },
+    onNegativeClick: () => { }
+  })
+}
+
 let pageUpdata = (number) => {
   page_index.value = number
   getDownloadData();
@@ -257,6 +284,16 @@ let getStatusTag = (status) => {
         type: 'error',
         style: { marginRight: '5px' }
       }, () => '下载失败')
+    case "supplement":
+      return h(NTag, {
+        type: 'error',
+        style: { marginRight: '5px' }
+      }, () => '补充下载中')
+    case "supplement_success":
+      return h(NTag, {
+        type: 'success',
+        style: { marginRight: '5px' }
+      }, () => '补充成功')
     default:
       return h(NTag, { type: 'default' }, () => status)
   }
@@ -332,7 +369,7 @@ let getDownloadTypeTag = (type) => {
         </n-collapse-item>
         <n-collapse-item title="下载错误高级操作" name="4">
           <n-button @click="delErrorTask_b" style="margin-bottom: 5px;" block>删除错误</n-button>
-          <n-button @click="refreshTask_b" block>重新下载错误</n-button>
+          <n-button @click="againTask_b" block>重新下载错误</n-button>
         </n-collapse-item>
       </n-collapse>
 
@@ -392,7 +429,7 @@ let getDownloadTypeTag = (type) => {
               <n-button @click="handleDelete(item.id)" size="small" type="error">
                 删除
               </n-button>
-              <n-button v-if="item.downloadStatus === 'error'" @click="handleRefresh(item.id)" size="small" type="info"
+              <n-button v-if="(item.downloadStatus === 'error' || item.downloadStatus === 'supplement_success') && item.id !== 0 && item.downloadBrType != null && item.downloadBrType !== ''" @click="handleRefresh(item.id)" size="small" type="info"
                 style="margin-top: 5px;">
                 重新下载
               </n-button>

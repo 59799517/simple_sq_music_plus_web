@@ -1,5 +1,5 @@
 <script setup lang="js">
-import {ref, computed } from 'vue'
+import {ref, computed, watch, onUnmounted } from 'vue'
 
 import Set from "./V3Set.vue";
 import {
@@ -23,6 +23,18 @@ const showAliyunSync = computed(() => {
   const value = aliyunShowConfig.configValue;
   return value !== 'false' && value !== false;
 });
+// 检查是否显示网速监控
+const showTrafficMonitoring = computed(() => {
+  const trafficConfig = stconfigInfoStore.data?.find(
+    item => item.configKey === 'system.show.traffic.monitoring'
+  );
+  console.log('流量监控显示配置:', trafficConfig);
+  // 如果配置不存在，默认显示；如果配置值为 false（字符串或布尔），则隐藏
+  if (!trafficConfig) return true;
+  const value = trafficConfig.configValue;
+  return value !== 'false' && value !== false;
+});
+
 // 检测是否为移动设备
 const isMobile = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -42,18 +54,48 @@ const activate = (place) => {
 };
 
 /**
- * 每间隔 10 秒执行一次 获取当前网速
+ * 当网速监控开启时，每 1 秒获取一次当前网速
+ * 当网速监控关闭时，停止请求以避免不必要的网络开销
  */
-setInterval(()=>{
+let speedIntervalId = null
+
+const startSpeedPolling = () => {
+  if (speedIntervalId) return
+  // 立即执行一次，避免等待 1 秒后才显示
   getNetSpeed()
-  .then((value)=>{
-    uploadSpeed.value = value.data.data.uploadSpeedFormatted+"p"
-    downloadSpeed.value = value.data.data.downloadSpeedFormatted
-  })
-  .catch((error)=>{
-    // console.error('getNetSpeed 错误:', error)
-  })
-},1000)
+    .then((value) => {
+      uploadSpeed.value = value.data.data.uploadSpeedFormatted + "p"
+      downloadSpeed.value = value.data.data.downloadSpeedFormatted
+    })
+    .catch(() => {})
+  speedIntervalId = setInterval(() => {
+    getNetSpeed()
+      .then((value) => {
+        uploadSpeed.value = value.data.data.uploadSpeedFormatted + "p"
+        downloadSpeed.value = value.data.data.downloadSpeedFormatted
+      })
+      .catch(() => {})
+  }, 1000)
+}
+
+const stopSpeedPolling = () => {
+  if (speedIntervalId) {
+    clearInterval(speedIntervalId)
+    speedIntervalId = null
+  }
+}
+
+watch(showTrafficMonitoring, (val) => {
+  if (val) {
+    startSpeedPolling()
+  } else {
+    stopSpeedPolling()
+  }
+}, { immediate: true })
+
+onUnmounted(() => {
+  stopSpeedPolling()
+})
 
 </script>
 
@@ -66,7 +108,7 @@ setInterval(()=>{
             <div>
               <n-flex justify= "center" align = "center">
                 <h2>SqMusic</h2>
-                <n-gradient-text :size="12" type="success" >
+                <n-gradient-text v-if="showTrafficMonitoring" :size="12" type="success" >
                   上传：{{uploadSpeed}}
                   下载：{{downloadSpeed}}
                 </n-gradient-text>

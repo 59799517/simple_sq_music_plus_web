@@ -1,5 +1,5 @@
 <script setup>
-import { NButton, NTag,  useMessage,NSpace } from 'naive-ui'
+import { NButton, NTag,  useMessage,NSpace,NModal,NDataTable } from 'naive-ui'
 import {h, ref,inject } from 'vue'
 import configInfoStore from "../stores/config";
 
@@ -12,7 +12,8 @@ import {
   postDownloadInfo,
   refreshTask,
   delDownloadInfo,
-  refreshStatus
+  refreshStatus,
+  errorTaskRetry
 } from "../utils/api.js";
 
 
@@ -124,29 +125,40 @@ let columns = [
           type: 'info',
           size: 'small',
           strong : true,
-          disabled : true,
         }, () => h('span', {}, '等待下载'))
       }else if (row.downloadStatus==="loading"){
         return h(NButton, {
           type: 'info',
           size: 'small',
           strong : true,
-          disabled : true,
         }, () => h('span', {}, '下载中'))
       }else if (row.downloadStatus==="success"){
         return h(NButton, {
           type: 'success',
           size: 'small',
           strong : true,
-          disabled : true,
         }, () => h('span', {}, '下载成功'))
       }else if (row.downloadStatus==="error"){
         return h(NButton, {
           type: 'error',
           size: 'small',
           strong : true,
-          disabled : true,
+          onClick: () => handleErrorClick(row)
         }, () => h('span', {}, '下载失败'))
+      }else if (row.downloadStatus==="supplement"){
+        return h(NButton, {
+          type: 'error',
+          size: 'small',
+          strong : true,
+          onClick: () => handleErrorClick(row)
+        }, () => h('span', {}, '补充下载中'))
+      }else if (row.downloadStatus==="supplement_success"){
+        return h(NButton, {
+          type: 'success',
+          size: 'small',
+          strong : true,
+          onClick: () => handleErrorClick(row)
+        }, () => h('span', {}, '补充成功'))
       }
     }
   }
@@ -206,7 +218,10 @@ let columns = [
         ]
       }else if (row.downloadStatus==="success"){
         return delbutton
-      }else if (row.downloadStatus==="error"){
+      }else if (row.downloadStatus==="error" || row.downloadStatus==="supplement_success"){
+        if (row.id === 0 || row.downloadBrType === null || row.downloadBrType === undefined || row.downloadBrType === '') {
+          return delbutton
+        }
         return     h(NSpace,{
           style: {
             // marginLeft: '10px'
@@ -215,10 +230,77 @@ let columns = [
             delbutton,
             refreshnutton
         ])
+      }else if (row.downloadStatus==="supplement"){
+        return delbutton
       }
     }
   }
 ]
+
+// 错误重试子任务弹窗
+let showErrorRetryModal = ref(false)
+let errorRetryData = ref([])
+// 错误行点击处理（外层整行 + 状态按钮共用）
+let handleErrorClick = (row) => {
+  errorTaskRetry(row.id).then(value=>{
+    if (value.data.code===200){
+      errorRetryData.value = value.data.data || []
+      showErrorRetryModal.value = true
+    }else{
+      window.$message.error("查询失败："+value.data.msg)
+    }
+  })
+}
+// 行属性：error 状态行添加点击事件和手型光标
+let handleRowProps = (row) => {
+  if (row.downloadStatus === 'error' || row.downloadStatus === 'supplement' || row.downloadStatus === 'supplement_success') {
+    return {
+      style: { cursor: 'pointer' },
+      onClick: (event) => {
+        // 点击操作按钮时不触发弹窗（阻止事件冒泡导致的误触发）
+        if (event.target.closest('button')) return
+        handleErrorClick(row)
+      }
+    }
+  }
+  return {}
+}
+// 弹窗表格列（复制主表格列，但移除最后一列"操作"，且状态列全部禁用点击）
+let errorRetryColumns = columns.slice(0, -1).map(col => {
+  if (col.key === 'downloadStatus') {
+    return {
+      ...col,
+      render(row) {
+        if (row.downloadStatus==="waiting"){
+          return h(NButton, {
+            type: 'info', size: 'small', strong: true,
+          }, () => h('span', {}, '等待下载'))
+        }else if (row.downloadStatus==="loading"){
+          return h(NButton, {
+            type: 'info', size: 'small', strong: true,
+          }, () => h('span', {}, '下载中'))
+        }else if (row.downloadStatus==="success"){
+          return h(NButton, {
+            type: 'success', size: 'small', strong: true,
+          }, () => h('span', {}, '下载成功'))
+        }else if (row.downloadStatus==="error"){
+          return h(NButton, {
+            type: 'error', size: 'small', strong: true, disabled: true,
+          }, () => h('span', {}, '下载失败'))
+        }else if (row.downloadStatus==="supplement"){
+          return h(NButton, {
+            type: 'error', size: 'small', strong: true, disabled: true,
+          }, () => h('span', {}, '补充下载中'))
+        }else if (row.downloadStatus==="supplement_success"){
+          return h(NButton, {
+            type: 'success', size: 'small', strong: true, disabled: true,
+          }, () => h('span', {}, '补充成功'))
+        }
+      }
+    }
+  }
+  return col
+})
 
 //是否显示高级功能
 let show_advanced = ref(false)
@@ -273,6 +355,14 @@ let select_download_status_options = ref([
   {
     label: "下载失败",
     value: "error"
+  },
+  {
+    label: "补充下载中",
+    value: "supplement"
+  },
+  {
+    label: "补充成功",
+    value: "supplement_success"
   }
 ])
 
@@ -406,6 +496,26 @@ let refreshTask_b =()=>{
   })
 }
 
+let againTask_b =()=>{
+  window.$dialog.warning({
+    title: '警告',
+    content: '确定重新下载所有错误任务？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      againTask().then(value=>{
+        if (value.data.code===200){
+          window.$message.success("操作成功")
+        }else{
+          window.$message.error("操作失败："+value.data.msg)
+        }
+      })
+    },
+    onNegativeClick: () => {
+
+    }
+  })
+}
 
 let pageUpdata=(number)=>{
   page_index.value=number
@@ -528,7 +638,7 @@ let update_download_status=(value, option)=>{
         </n-tooltip>
         <n-tooltip :show-arrow="false" trigger="hover">
           <template #trigger>
-            <n-button @click="refreshTask_b">重新下载错误</n-button>
+            <n-button @click="againTask_b">重新下载错误</n-button>
           </template>
           错误的任务将全部重新下载
         </n-tooltip>
@@ -546,6 +656,7 @@ let update_download_status=(value, option)=>{
         :data="page_data"
         size="large"
         minWidth = 1000
+        :row-props="handleRowProps"
     />
     <br>
     <n-card title="">
@@ -572,6 +683,9 @@ let update_download_status=(value, option)=>{
     </n-card>
     <n-back-top :right="100" :visibility-height="100" />
   </div>
+  <n-modal v-model:show="showErrorRetryModal" preset="card" title="错误重试子任务" style="width: 80%">
+    <n-data-table :columns="errorRetryColumns" :data="errorRetryData" size="large" />
+  </n-modal>
   </n-spin>
 </template>
 
