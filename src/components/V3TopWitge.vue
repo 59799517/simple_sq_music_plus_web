@@ -1,5 +1,6 @@
 <script setup lang="js">
 import {ref, computed, watch, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 import Set from "./V3Set.vue";
 import {
@@ -97,6 +98,16 @@ onUnmounted(() => {
   stopSpeedPolling()
 })
 
+// 点击顶部 SqMusic：跳回搜索页；若 V3Search 已挂载，通知其清空输入框并回到空态
+const router = useRouter()
+const onLogoClick = () => {
+  if (router.currentRoute.value.path !== '/v3search') {
+    router.push('/v3search')
+  }
+  // 已在搜索页时靠该事件让 V3Search 重置；跨页跳转时新挂载的 V3Search 天然处于空态
+  window.dispatchEvent(new CustomEvent('sqmusic:reset-search'))
+}
+
 </script>
 
 <template>
@@ -107,7 +118,7 @@ onUnmounted(() => {
           <template #trigger>
             <div>
               <n-flex justify= "center" align = "center">
-                <h2>SqMusic</h2>
+                <h2 class="sq-logo" @click="onLogoClick">SqMusic</h2>
                 <n-gradient-text v-if="showTrafficMonitoring" :size="12" type="success" >
                   上传：{{uploadSpeed}}
                   下载：{{downloadSpeed}}
@@ -239,6 +250,23 @@ onUnmounted(() => {
   align-content: center;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* SqMusic 品牌标题：与 V3Search 空态大标题同款渐变字，字号与边距保持原 h2 不变 */
+.sq-logo{
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(120deg, #5B8CFF 0%, #8B5CF6 38%, #F472B6 76%, #34D399 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  transition: opacity 0.2s ease;
+}
+.sq-logo:hover{
+  opacity: 0.85;
 }
 
 /* 移动端导航样式 */

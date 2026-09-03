@@ -111,6 +111,17 @@ export function getAllOption() {
     });
 }
 
+/**
+ * 获取插件码率类型列表（下载管理高级操作 - 码率下拉）
+ * @returns {*}
+ */
+export function getPlugBrTypeList() {
+    return request({
+        url: baseUrl + configUrl + "/getPlugBrTypeList",
+        method: "get"
+    });
+}
+
 
 /**
  * 搜索提示
@@ -399,6 +410,24 @@ export function errorTaskRetry(id) {
         data:{
             "id": id
         }
+    });
+}
+
+/**
+ * 高级操作：按自定义条件批量删除 / 重新下载
+ * @param data {operationType:'delete'|'rewrite',
+ *   可选条件字段(互相为并且关系)：
+ *   downloadCreateTimeStart / downloadCreateTimeEnd / downloadPlugName / downloadBrType /
+ *   downloadMusicname / downloadArtistname / downloadAlbumname / downloadStatus /
+ *   downloadUpdateTimeStart / downloadUpdateTimeEnd
+ * }
+ * @returns {*}
+ */
+export function advancedTask(data) {
+    return request({
+        url: baseUrl + taskUrl + "/advancedTask",
+        method: "post",
+        data: data
     });
 }
 

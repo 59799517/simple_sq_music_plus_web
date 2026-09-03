@@ -265,4 +265,35 @@ const downloadAlbum = () => {
 </template>
 
 <style scoped>
+/* 与搜索结果表格统一的“选中感”hover（仅样式，不改逻辑） */
+/* 1) 歌曲行码率下载标签（info tag + cursor pointer）→ 蓝色实底 */
+:deep(.n-tag[style*="pointer"]) {
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+:deep(.n-tag[style*="pointer"]:hover) {
+  color: #fff !important;
+  background-image: linear-gradient(135deg, #4098fc, #2080f0) !important;
+  background-color: transparent !important;
+  box-shadow: 0 2px 10px color-mix(in srgb, rgba(32, 128, 240, 0.45), transparent) !important;
+}
+
+/* 2) 歌曲行「播放」按钮（success ghost）→ 绿色实底，同表格播放按钮 */
+:deep(.n-button--success-type.n-button--ghost:not(.n-button--disabled)),
+:deep(.n-button--default-type:not(.n-button--disabled)) {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+      box-shadow 0.2s ease, transform 0.2s ease;
+}
+:deep(.n-button--success-type.n-button--ghost:not(.n-button--disabled):hover),
+:deep(.n-button--default-type:not(.n-button--disabled):hover) {
+  color: #fff !important;
+  background: linear-gradient(135deg, #3ecf8e, #18a058) !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 12px color-mix(in srgb, rgba(24, 160, 88, 0.45), transparent) !important;
+  transform: scale(1.03);
+}
+:deep(.n-button--success-type.n-button--ghost:not(.n-button--disabled):active),
+:deep(.n-button--default-type:not(.n-button--disabled):active) {
+  transform: scale(0.97);
+  box-shadow: none;
+}
 </style>

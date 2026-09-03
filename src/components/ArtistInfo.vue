@@ -180,4 +180,31 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 与搜索结果表格统一的“选中感”hover（仅样式，不改逻辑） */
+/* 1) 「下载歌手全部专辑」按钮（default）→ 绿色实底，同表格下载类按钮 */
+:deep(.n-button--default-type:not(.n-button--disabled)) {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+      box-shadow 0.2s ease, transform 0.2s ease;
+}
+:deep(.n-button--default-type:not(.n-button--disabled):hover) {
+  color: #fff !important;
+  background: linear-gradient(135deg, #3ecf8e, #18a058) !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 12px color-mix(in srgb, rgba(24, 160, 88, 0.45), transparent) !important;
+  transform: scale(1.03);
+}
+:deep(.n-button--default-type:not(.n-button--disabled):active) {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* 2) 专辑列表卡片（可点击进入专辑）→ hover 泛蓝紫色光晕，强调“可选中/可进入” */
+:deep(.n-card--hoverable) {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease, background-image 0.25s ease;
+}
+:deep(.n-card--hoverable:hover) {
+  border-color: rgba(64, 152, 252, 0.75) !important;
+  background-image: linear-gradient(135deg, rgba(64, 152, 252, 0.16), rgba(139, 92, 246, 0.1)) !important;
+  box-shadow: 0 4px 18px color-mix(in srgb, rgba(96, 138, 255, 0.4), transparent) !important;
+}
 </style>
