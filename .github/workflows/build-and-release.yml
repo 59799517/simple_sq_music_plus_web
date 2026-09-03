@@ -2,8 +2,14 @@ name: Build and Release
 
 on:
   push:
-    branches: [ v3,v2 ] # 只在提交到2.0分支时触发
+    branches: [ v3, v2 ]
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: '自定义发布版本号（可选，留空则使用 package.json 版本）'
+        required: false
+        default: ''
+
 env:
   APP_NAME: simple_sq_music_plus_web
   DOCKER_IMAGE_NAME: simple_sq_music_plus_web
@@ -70,6 +76,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ========== 阿里云镜像构建（已修复所有报错） ==========
       - name: Build and push Docker images to Alibaba Cloud
         uses: docker/build-push-action@v6
         with:
@@ -77,13 +84,16 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: false
+          sbom: false
+          attestations: []
+          format: docker
           tags: |
             registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}
             registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:latest
             registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}-amd64
             registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:${{ env.VERSION }}-arm64
             registry.cn-hangzhou.aliyuncs.com/sqdockler/simple_sq_music_plus_web:latest-arm64
-          outputs: type=image,oci-mediatypes=false,push=true
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -92,6 +102,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ========== GitHub Packages 镜像构建 ==========
       - name: Build and push Docker images to GitHub Packages
         uses: docker/build-push-action@v6
         with:
